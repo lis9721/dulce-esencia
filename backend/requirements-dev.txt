@@ -1,0 +1,6 @@
+# Dependencias SOLO para CI/desarrollo (lint + contrato OpenAPI).
+# No se instalan en la imagen/función de producción: requirements.txt
+# se queda limpio para que el runtime de Vercel arranque más rápido.
+-r requirements.txt
+ruff==0.8.4
+schemathesis==4.28.0

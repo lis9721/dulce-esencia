@@ -1,0 +1,2559 @@
+{
+	"info": {
+		"name": "Dulce Esencia - Coleccion Completa (FastAPI + Control de Roles)",
+		"description": "Coleccion unica y organizada para el Cuarto Avance (React + Vite + FastAPI).\n\nCarpetas 0 a 9: CRUD completo de cada modulo (usuarios, productos, servicios, carrito, pedidos, cupones, contacto, roles) cubriendo GET/POST/PUT/PATCH/DELETE (REQ-14, REQ-16, REQ-26).\n\nCarpeta 10: pruebas de control de acceso (401 sin token, 403 con rol incorrecto, y verificacion de que el rol correcto SI puede) (REQ-11, REQ-12, REQ-13).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_postman_id": "53072598-e750-4544-87a8-67be4c5f09ba"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [],
+	"variable": [],
+	"item": [
+		{
+			"name": "0. Salud",
+			"item": [
+				{
+					"name": "GET Raíz de la API",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": []
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "GET Salud de la conexión a la base de datos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/salud/db",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"salud",
+								"db"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				}
+			],
+			"description": "Endpoints sin autenticación para confirmar que el servidor y la base de datos están arriba."
+		},
+		{
+			"name": "1. Auth / Usuarios (registro y login)",
+			"item": [
+				{
+					"name": "POST Registro público (nuevo cliente)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/registro",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"registro"
+							]
+						},
+						"description": "Crea un cliente nuevo (rol forzado a 'cliente'). Devuelve 201 y, fuera de producción, el token de verificación en texto plano para poder probar POST /api/usuarios/verificar-correo sin revisar la consola del servidor.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Restrepo\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"1098765432\",\n  \"direccion\": \"Cra 45 # 10-20\",\n  \"telefono\": \"3001234567\",\n  \"correo\": \"ana.restrepo.prueba@example.com\",\n  \"password\": \"Clave123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Registro creado (201)', () => pm.response.to.have.status(201));",
+									"const datos = pm.response.json();",
+									"if (datos.tokenVerificacion) { pm.environment.set('token_verificacion', datos.tokenVerificacion); }"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "POST Verificar correo",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/verificar-correo",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"verificar-correo"
+							]
+						},
+						"description": "Segundo paso del registro. Usa el token guardado por la petición de Registro (variable {{token_verificacion}}, solo disponible fuera de producción).",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correo\": \"ana.restrepo.prueba@example.com\",\n  \"token\": \"{{token_verificacion}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Login admin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Guarda el JWT en {{token}} y {{token_admin}} para las siguientes peticiones protegidas.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correo\": \"{{correo_admin}}\",\n  \"password\": \"{{password_admin}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Login exitoso (200)', () => pm.response.to.have.status(200));",
+									"const datos = pm.response.json();",
+									"if (datos.access_token) {",
+									"    pm.environment.set('token', datos.access_token);",
+									"    pm.environment.set('token_admin', datos.access_token);",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "POST Login empleado",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Guarda el JWT en {{token_empleado}}.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correo\": \"{{correo_empleado}}\",\n  \"password\": \"{{password_empleado}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Login exitoso (200)', () => pm.response.to.have.status(200));",
+									"const datos = pm.response.json();",
+									"if (datos.access_token) { pm.environment.set('token_empleado', datos.access_token); }"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "POST Login cliente",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Guarda el JWT en {{token_cliente}} y también en {{token}} (queda como el token 'activo' para las carpetas de Carrito/Pedidos, pensadas para probarse como cliente).",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correo\": \"{{correo_cliente}}\",\n  \"password\": \"{{password_cliente}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Login exitoso (200)', () => pm.response.to.have.status(200));",
+									"const datos = pm.response.json();",
+									"if (datos.access_token) {",
+									"    pm.environment.set('token_cliente', datos.access_token);",
+									"    pm.environment.set('token', datos.access_token);",
+									"}"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "POST Login credenciales incorrectas (401)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/auth/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Evidencia de manejo de error: credenciales inválidas.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correo\": \"{{correo_admin}}\",\n  \"password\": \"ClaveIncorrecta1\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Rechaza credenciales incorrectas (401)', () => pm.response.to.have.status(401));"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "POST Olvidé mi contraseña (recuperar)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/recuperar",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"recuperar"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correo\": \"{{correo_cliente}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Restablecer contraseña",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/restablecer",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"restablecer"
+							]
+						},
+						"description": "El token se imprime en la consola del servidor (no hay proveedor de correo configurado). Pégalo aquí antes de correr esta petición.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correo\": \"{{correo_cliente}}\",\n  \"token\": \"PEGA_AQUI_EL_TOKEN_DE_LA_CONSOLA\",\n  \"password_nueva\": \"NuevaClave123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Reenviar verificación",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/reenviar-verificacion",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"reenviar-verificacion"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"correo\": \"ana.restrepo.prueba@example.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Registro, verificación de correo, login de los 3 roles y recuperación de contraseña."
+		},
+		{
+			"name": "2. Usuarios (perfil y gestión admin)",
+			"item": [
+				{
+					"name": "GET Mi perfil",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/perfil",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"perfil"
+							]
+						},
+						"description": "Ruta protegida (cualquier rol autenticado)."
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Actualizar mi perfil",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/perfil",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"perfil"
+							]
+						},
+						"description": "Actualización parcial de datos de contacto propios (nunca correo/documento/password/rol).",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Ana\",\n  \"apellido\": \"Restrepo\",\n  \"direccion\": \"Nueva dirección 123\",\n  \"telefono\": \"3009876543\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Cambiar mi contraseña",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/perfil/password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"perfil",
+								"password"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"password_actual\": \"Clave123\",\n  \"password_nueva\": \"ClaveNueva123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Crear usuario (admin)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios"
+							]
+						},
+						"description": "Solo admin. Crea la cuenta ya activa y verificada, con el rol indicado.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Carlos\",\n  \"apellido\": \"Gómez\",\n  \"tipo_documento\": \"CC\",\n  \"numero_documento\": \"1122334455\",\n  \"direccion\": \"Cll 50 # 20-30\",\n  \"telefono\": \"3012345678\",\n  \"correo\": \"carlos.gomez.prueba@example.com\",\n  \"password\": \"Clave123\",\n  \"rol\": \"empleado\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Usuario creado (201)', () => pm.response.to.have.status(201));",
+									"const datos = pm.response.json();",
+									"if (datos.id) { pm.environment.set('usuario_id', datos.id); }"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "GET Listar usuarios (admin/empleado)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "GET Detalle de usuario por id",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/{{usuario_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"{{usuario_id}}"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Editar usuario (admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/{{usuario_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"{{usuario_id}}"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Carlos\",\n  \"apellido\": \"Gómez R.\",\n  \"direccion\": \"Nueva dirección 456\",\n  \"telefono\": \"3019998888\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Cambiar rol de usuario",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/{{usuario_id}}/rol",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"{{usuario_id}}",
+								"rol"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"rol\": \"empleado\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH Cambiar estado de usuario (activar/desactivar)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/{{usuario_id}}/estado",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"{{usuario_id}}",
+								"estado"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"activo\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Eliminar usuario",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/usuarios/{{usuario_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"usuarios",
+								"{{usuario_id}}"
+							]
+						},
+						"description": "Solo admin. Si el usuario tiene pedidos asociados responde 409 (sugiere desactivarlo en su lugar)."
+					},
+					"response": []
+				}
+			],
+			"description": "Perfil propio + CRUD de usuarios para el panel admin. GET, POST, PUT, PATCH y DELETE."
+		},
+		{
+			"name": "3. Productos",
+			"item": [
+				{
+					"name": "GET Catálogo público de productos",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/productos?page=1&limit=12",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"productos"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "12"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "GET Catálogo filtrado por familia y búsqueda",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/productos?familia=tortas&buscar=chocolate",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"productos"
+							],
+							"query": [
+								{
+									"key": "familia",
+									"value": "tortas"
+								},
+								{
+									"key": "buscar",
+									"value": "chocolate"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "GET Listado completo (admin/empleado)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/productos/admin/todos?page=1&limit=20",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"productos",
+								"admin",
+								"todos"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "20"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "GET Detalle de producto",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/productos/{{producto_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"productos",
+								"{{producto_id}}"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "POST Subir imagen de producto",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/productos/imagen",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"productos",
+								"imagen"
+							]
+						},
+						"description": "Body form-data, campo 'imagen' tipo File. Selecciona un .jpg/.jpeg/.png/.webp de máximo 5 MB antes de enviar.",
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "imagen",
+									"type": "file",
+									"src": ""
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "POST Crear producto",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/productos",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"productos"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"titulo\": \"Torta de Chocolate Intenso\",\n  \"descripcion\": \"Bizcocho húmedo de cacao con ganache de chocolate semiamargo\",\n  \"imagen\": \"torta-chocolate.jpg\",\n  \"orden\": 1,\n  \"precio\": 85000,\n  \"stock\": 12,\n  \"sku\": \"TOR-001\",\n  \"familia\": \"tortas\",\n  \"peso_g\": 1200,\n  \"activo\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Producto creado (201)', () => pm.response.to.have.status(201));",
+									"const datos = pm.response.json();",
+									"if (datos.id) { pm.environment.set('producto_id', datos.id); }"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "PUT Actualizar producto (reemplazo completo)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/productos/{{producto_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"productos",
+								"{{producto_id}}"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"titulo\": \"Torta de Chocolate Intenso\",\n  \"descripcion\": \"Bizcocho húmedo de cacao con ganache de chocolate semiamargo\",\n  \"imagen\": \"torta-chocolate.jpg\",\n  \"orden\": 1,\n  \"precio\": 199900,\n  \"stock\": 30,\n  \"sku\": \"TOR-001\",\n  \"familia\": \"tortas\",\n  \"peso_g\": 1200,\n  \"activo\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH Cambiar estado (publicar/despublicar)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/productos/{{producto_id}}/estado?activo=false",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"productos",
+								"{{producto_id}}",
+								"estado"
+							],
+							"query": [
+								{
+									"key": "activo",
+									"value": "false"
+								}
+							]
+						},
+						"description": "`activo` viaja como query param (bool), no en el body — así está definido en la ruta."
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Eliminar producto",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/productos/{{producto_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"productos",
+								"{{producto_id}}"
+							]
+						},
+						"description": "Solo admin. Si el producto ya tiene pedidos asociados responde 409 (sugiere despublicarlo con PATCH /estado)."
+					},
+					"response": []
+				}
+			],
+			"description": "Catálogo público + gestión admin/empleado. GET, POST, PUT, PATCH y DELETE."
+		},
+		{
+			"name": "4. Servicios",
+			"item": [
+				{
+					"name": "GET Catálogo público de servicios",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/servicios?page=1&limit=12",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"servicios"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "12"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "GET Listado completo (admin/empleado)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/servicios/admin/todos",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"servicios",
+								"admin",
+								"todos"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "GET Detalle de servicio",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/servicios/{{servicio_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"servicios",
+								"{{servicio_id}}"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "POST Crear servicio",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/servicios",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"servicios"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Torta personalizada\",\n  \"descripcion\": \"Diseñamos contigo la torta ideal: sabor, tamaño y decoración\",\n  \"precio\": 45000,\n  \"duracion_minutos\": 40,\n  \"imagen\": \"asesoria.jpg\",\n  \"orden\": 1,\n  \"codigo\": \"SERV-TORTA-PERS\",\n  \"activo\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Servicio creado (201)', () => pm.response.to.have.status(201));",
+									"const datos = pm.response.json();",
+									"if (datos.id) { pm.environment.set('servicio_id', datos.id); }"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "PUT Actualizar servicio (reemplazo completo)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/servicios/{{servicio_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"servicios",
+								"{{servicio_id}}"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Torta personalizada\",\n  \"descripcion\": \"Diseñamos contigo la torta ideal: sabor, tamaño y decoración\",\n  \"precio\": 50000,\n  \"duracion_minutos\": 40,\n  \"imagen\": \"asesoria.jpg\",\n  \"orden\": 1,\n  \"codigo\": \"SERV-TORTA-PERS\",\n  \"activo\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH Cambiar estado (publicar/despublicar)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/servicios/{{servicio_id}}/estado?activo=false",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"servicios",
+								"{{servicio_id}}",
+								"estado"
+							],
+							"query": [
+								{
+									"key": "activo",
+									"value": "false"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Eliminar servicio",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/servicios/{{servicio_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"servicios",
+								"{{servicio_id}}"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				}
+			],
+			"description": "Catálogo público + gestión admin/empleado. GET, POST, PUT, PATCH y DELETE."
+		},
+		{
+			"name": "5. Carrito",
+			"item": [
+				{
+					"name": "GET Ver mi carrito",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/carrito",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"carrito"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "POST Agregar producto al carrito",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/carrito/items",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"carrito",
+								"items"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"producto_id\": \"{{producto_id}}\",\n  \"cantidad\": 2\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PUT Fijar cantidad exacta de un ítem",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/carrito/items/{{producto_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"carrito",
+								"items",
+								"{{producto_id}}"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"cantidad\": 5\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Quitar un producto del carrito",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/carrito/items/{{producto_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"carrito",
+								"items",
+								"{{producto_id}}"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "POST Fusionar carrito de invitado",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/carrito/fusionar",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"carrito",
+								"fusionar"
+							]
+						},
+						"description": "Fusiona el carrito guardado en localStorage (antes de iniciar sesión) con el carrito ya existente en la base de datos.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"items\": [\n    {\n      \"producto_id\": \"{{producto_id}}\",\n      \"cantidad\": 1\n    }\n  ]\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Vaciar carrito completo",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/carrito",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"carrito"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				}
+			],
+			"description": "Carrito del usuario autenticado. GET, POST, PUT y DELETE."
+		},
+		{
+			"name": "6. Pedidos (checkout)",
+			"item": [
+				{
+					"name": "POST Confirmar pedido (checkout)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/pedidos",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"pedidos"
+							]
+						},
+						"description": "Arma el pedido a partir del carrito real del usuario autenticado (agrega productos al carrito antes de correr esta petición).",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"direccion_envio\": \"Cra 45 # 10-20, Medellín\",\n  \"telefono_contacto\": \"3001234567\",\n  \"metodo_pago\": \"tarjeta\",\n  \"cupon_codigo\": \"BIENVENIDA10\",\n  \"idempotency_key\": \"prueba-postman-001\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Pedido creado (201)', () => pm.response.to.have.status(201));",
+									"const datos = pm.response.json();",
+									"if (datos.id) { pm.environment.set('pedido_id', datos.id); }"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "GET Listar mis pedidos / todos (admin-empleado)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/pedidos?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"pedidos"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "GET Detalle de un pedido",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/pedidos/{{pedido_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"pedidos",
+								"{{pedido_id}}"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH Cambiar estado del pedido",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/pedidos/{{pedido_id}}/estado",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"pedidos",
+								"{{pedido_id}}",
+								"estado"
+							]
+						},
+						"description": "Solo admin/empleado. Valores válidos: pendiente, pagado, enviado, entregado, cancelado.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"estado\": \"pagado\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				}
+			],
+			"description": "Checkout a partir del carrito real. GET, POST y PATCH."
+		},
+		{
+			"name": "7. Cupones",
+			"item": [
+				{
+					"name": "POST Validar cupón (público)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cupones/validar",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cupones",
+								"validar"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"codigo\": \"BIENVENIDA10\",\n  \"subtotal\": 150000\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "GET Listar cupones (admin/empleado)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cupones",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cupones"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "GET Detalle de cupón",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cupones/{{cupon_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cupones",
+								"{{cupon_id}}"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "POST Crear cupón",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cupones",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cupones"
+							]
+						},
+						"description": "Solo admin.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"codigo\": \"BIENVENIDA10\",\n  \"tipo\": \"porcentaje\",\n  \"valor\": 10,\n  \"monto_minimo\": 50000,\n  \"usos_maximos\": 100,\n  \"valido_desde\": \"2026-01-01T00:00:00\",\n  \"valido_hasta\": \"2026-12-31T23:59:59\",\n  \"activo\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Cupón creado (201)', () => pm.response.to.have.status(201));",
+									"const datos = pm.response.json();",
+									"if (datos.id) { pm.environment.set('cupon_id', datos.id); }"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "PUT Actualizar cupón (reemplazo completo)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cupones/{{cupon_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cupones",
+								"{{cupon_id}}"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"codigo\": \"BIENVENIDA10\",\n  \"tipo\": \"porcentaje\",\n  \"valor\": 15,\n  \"monto_minimo\": 50000,\n  \"usos_maximos\": 100,\n  \"valido_desde\": \"2026-01-01T00:00:00\",\n  \"valido_hasta\": \"2026-12-31T23:59:59\",\n  \"activo\": true\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "PATCH Cambiar estado del cupón",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cupones/{{cupon_id}}/estado",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cupones",
+								"{{cupon_id}}",
+								"estado"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"activo\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Eliminar cupón",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/cupones/{{cupon_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"cupones",
+								"{{cupon_id}}"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				}
+			],
+			"description": "Validación pública + gestión admin. GET, POST, PUT, PATCH y DELETE."
+		},
+		{
+			"name": "8. Contacto",
+			"item": [
+				{
+					"name": "POST Enviar mensaje de contacto (público)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/contacto",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"contacto"
+							]
+						},
+						"description": "",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nombre\": \"Laura Gómez\",\n  \"correo\": \"laura.prueba@example.com\",\n  \"mensaje\": \"Hola, quisiera saber si tienen envíos a Medellín.\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Mensaje creado (201)', () => pm.response.to.have.status(201));",
+									"const datos = pm.response.json();",
+									"if (datos.id) { pm.environment.set('mensaje_id', datos.id); }"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "GET Listar mensajes (admin/empleado)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/contacto?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"contacto"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "GET Detalle de mensaje",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/contacto/{{mensaje_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"contacto",
+								"{{mensaje_id}}"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				},
+				{
+					"name": "DELETE Eliminar mensaje",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/contacto/{{mensaje_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"contacto",
+								"{{mensaje_id}}"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				}
+			],
+			"description": "Formulario público + bandeja de mensajes admin/empleado. GET, POST y DELETE."
+		},
+		{
+			"name": "9. Roles (solo lectura)",
+			"item": [
+				{
+					"name": "GET Listar roles y permisos",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/roles",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"roles"
+							]
+						},
+						"description": "Solo admin. Tabla documental (el control de acceso real vive en el ENUM usuarios.rol)."
+					},
+					"response": []
+				},
+				{
+					"name": "GET Detalle de un rol",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/roles/1",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"roles",
+								"1"
+							]
+						},
+						"description": ""
+					},
+					"response": []
+				}
+			],
+			"description": "Tabla documental de roles y permisos. Solo GET."
+		},
+		{
+			"name": "10. Control de acceso por rol (401 / 403)",
+			"item": [
+				{
+					"name": "0. Login (obtiene tokens por rol)",
+					"item": [
+						{
+							"name": "Login admin",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\"correo\": \"{{correo_admin}}\", \"password\": \"{{password_admin}}\"}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/auth/login",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"auth",
+										"login"
+									]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('login admin funcionó (200)', () => pm.response.to.have.status(200));",
+											"if (pm.response.code === 200) { pm.environment.set('token_admin', pm.response.json().access_token); }"
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Login empleado",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\"correo\": \"{{correo_empleado}}\", \"password\": \"{{password_empleado}}\"}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/auth/login",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"auth",
+										"login"
+									]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('login empleado funcionó (200)', () => pm.response.to.have.status(200));",
+											"if (pm.response.code === 200) { pm.environment.set('token_empleado', pm.response.json().access_token); }"
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Login cliente",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\"correo\": \"{{correo_cliente}}\", \"password\": \"{{password_cliente}}\"}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/auth/login",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"auth",
+										"login"
+									]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('login cliente funcionó (200)', () => pm.response.to.have.status(200));",
+											"if (pm.response.code === 200) { pm.environment.set('token_cliente', pm.response.json().access_token); }"
+										]
+									}
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "1. Sin token -> 401 (no 403)",
+					"item": [
+						{
+							"name": "GET /api/usuarios sin token",
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/usuarios",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"usuarios"
+									]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('401 sin token', () => pm.response.to.have.status(401));"
+										]
+									}
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "2. Rol incorrecto -> 403",
+					"item": [
+						{
+							"name": "Cliente borra un usuario (solo admin)",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_cliente}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/usuarios/{{id_inexistente}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"usuarios",
+										"{{id_inexistente}}"
+									]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('403 (cliente no puede borrar usuarios)', () => pm.response.to.have.status(403));"
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Empleado borra un producto (solo admin)",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_empleado}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/productos/{{id_inexistente}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"productos",
+										"{{id_inexistente}}"
+									]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('403 (empleado no puede borrar productos)', () => pm.response.to.have.status(403));"
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Cliente crea un producto (admin+empleado)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_cliente}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/productos",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"productos"
+									]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('403 (cliente no puede crear productos)', () => pm.response.to.have.status(403));"
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Cliente lista roles (solo admin)",
+							"request": {
+								"method": "GET",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_cliente}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/roles",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"roles"
+									]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('403 (cliente no puede ver roles)', () => pm.response.to.have.status(403));"
+										]
+									}
+								}
+							]
+						},
+						{
+							"name": "Empleado crea un cupón (solo admin)",
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_empleado}}"
+									},
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{}"
+								},
+								"url": {
+									"raw": "{{base_url}}/api/cupones",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"cupones"
+									]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('403 (empleado no puede crear cupones)', () => pm.response.to.have.status(403));"
+										]
+									}
+								}
+							]
+						}
+					]
+				},
+				{
+					"name": "3. Rol correcto -> NO debe dar 403 (sanity check)",
+					"item": [
+						{
+							"name": "Admin borra producto inexistente -> 404, no 403",
+							"request": {
+								"method": "DELETE",
+								"header": [
+									{
+										"key": "Authorization",
+										"value": "Bearer {{token_admin}}"
+									}
+								],
+								"url": {
+									"raw": "{{base_url}}/api/productos/{{id_inexistente}}",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"productos",
+										"{{id_inexistente}}"
+									]
+								}
+							},
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test('NO da 403 (el rol admin sí tiene permiso)', () => pm.expect(pm.response.code).to.not.equal(403));",
+											"pm.test('da 404 porque el id no existe (esperado)', () => pm.response.to.have.status(404));"
+										]
+									}
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+	]
+}

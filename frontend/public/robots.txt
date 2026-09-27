@@ -1,0 +1,10 @@
+# Dulce Esencia Pastelería
+# TODO: al conectar el dominio real, actualizar la URL del Sitemap abajo.
+
+User-agent: *
+Allow: /
+Disallow: /panel
+Disallow: /restablecer-password
+Disallow: /verificar-correo
+
+Sitemap: https://dulceesencia.com/sitemap.xml

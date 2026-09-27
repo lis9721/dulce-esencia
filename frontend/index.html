@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#242222" />
+    <script>
+      // Aplica el tema ANTES del primer render de React, leyendo la
+      // preferencia guardada (localStorage) o, si nunca se eligió,
+      // cayendo al tema del sistema operativo. Sin esto, la página
+      // cargaría siempre en claro por una fracción de segundo y luego
+      // "saltaría" a oscuro (flash of wrong theme).
+      (function () {
+        try {
+          var guardado = localStorage.getItem("essentia-theme");
+          var prefiereOscuro = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var oscuro = guardado ? guardado === "dark" : prefiereOscuro;
+          if (oscuro) document.documentElement.classList.add("dark");
+        } catch (e) {
+          // localStorage puede fallar (modo privado, etc.): no pasa
+          // nada, simplemente arranca en tema claro.
+        }
+      })();
+    </script>
+    <meta
+      name="description"
+      content="Descubre Dulce Esencia: tortas, cupcakes, galletas, postres y panes artesanales horneados cada día en Medellín. Pide en línea con domicilio."
+    />
+    <!-- TODO: al conectar el dominio real, actualizar aquí y en
+         useDocumentTitle.js (URL_BASE) todas las URLs absolutas. -->
+    <link rel="canonical" href="https://dulceesencia.com/" />
+
+    <!-- Open Graph (vista previa al compartir en Facebook, WhatsApp, LinkedIn...) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Dulce Esencia Pastelería" />
+    <meta property="og:title" content="Dulce Esencia Pastelería | Repostería artesanal" />
+    <meta
+      property="og:description"
+      content="Tortas, cupcakes, galletas, postres y panes artesanales horneados cada día. Pide en línea con domicilio."
+    />
+    <meta property="og:url" content="https://dulceesencia.com/" />
+    <meta property="og:image" content="https://dulceesencia.com/og-image.jpg" />
+    <meta property="og:image:width" content="1000" />
+    <meta property="og:image:height" content="526" />
+    <meta property="og:locale" content="es_CO" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Dulce Esencia Pastelería | Repostería artesanal" />
+    <meta
+      name="twitter:description"
+      content="Tortas, cupcakes, galletas, postres y panes artesanales horneados cada día. Pide en línea con domicilio."
+    />
+    <meta name="twitter:image" content="https://dulceesencia.com/og-image.jpg" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@500;600;700&family=Inter:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <title>Repostería artesanal | Dulce Esencia Pastelería</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

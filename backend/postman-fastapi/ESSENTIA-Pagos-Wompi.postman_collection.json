@@ -1,0 +1,224 @@
+{
+  "info": {
+    "_postman_id": "e3b7a2f0-pagos-wompi-essentia-0001",
+    "name": "Dulce Esencia - Módulo de Pagos (Wompi Sandbox)",
+    "description": "Colección del módulo de pagos de Dulce Esencia. Requiere un token JWT válido (usa la colección principal ESSENTIA-Postman-Completo para hacer login y copiar el token en la variable {{token}} del entorno).\n\nAntes de probar 'Crear pago', asegúrate de tener configuradas las variables WOMPI_PUBLIC_KEY, WOMPI_PRIVATE_KEY, WOMPI_EVENTS_SECRET y WOMPI_INTEGRITY_SECRET en backend/.env con tus llaves de Sandbox (ver docs/modulo-pagos-wompi.md).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "payment_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "reference",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Crear pago",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Idempotency-Key",
+            "value": "prueba-postman-001",
+            "description": "Opcional. Repetir la misma llave evita crear un pago duplicado."
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/pagos",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "pagos"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"monto\": 50000,\n  \"moneda\": \"COP\",\n  \"correo_cliente\": \"cliente@example.com\",\n  \"nombre_cliente\": \"Cliente Demo\",\n  \"descripcion\": \"Pago de prueba\",\n  \"proveedor\": \"wompi\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "// Guarda payment_id y reference para usarlos en las demás peticiones de esta colección.",
+              "if (pm.response.code === 201) {",
+              "    const datos = pm.response.json();",
+              "    pm.collectionVariables.set('payment_id', datos.payment_id);",
+              "    pm.collectionVariables.set('reference', datos.reference);",
+              "}",
+              "pm.test('Se creó el pago (201) y trae checkout_url', function () {",
+              "    pm.response.to.have.status(201);",
+              "    pm.expect(pm.response.json().checkout_url).to.be.a('string');",
+              "});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Obtener pago por id",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/pagos/{{payment_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "pagos",
+            "{{payment_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Obtener pago por referencia",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{base_url}}/api/pagos/referencia/{{reference}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "pagos",
+            "referencia",
+            "{{reference}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Sincronizar pago con Wompi (/sync)",
+      "request": {
+        "method": "POST",
+        "url": {
+          "raw": "{{base_url}}/api/pagos/{{payment_id}}/sync",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "pagos",
+            "{{payment_id}}",
+            "sync"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Webhook Wompi (simulación de evento transaction.updated)",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/webhooks/wompi",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "webhooks",
+            "wompi"
+          ]
+        },
+        "description": "Wompi Sandbox llama a este endpoint automáticamente cuando el cliente termina el Checkout — esta petición es solo para SIMULAR un evento a mano. El checksum de este ejemplo NO es válido (no conoces tu WOMPI_EVENTS_SECRET real desde Postman): úsala para probar que un checksum inválido se rechaza con 400, o recalcula el checksum tú mismo siguiendo docs/modulo-pagos-wompi.md.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"event\": \"transaction.updated\",\n  \"data\": {\n    \"transaction\": {\n      \"id\": \"1234-1610641025-49201\",\n      \"amount_in_cents\": 5000000,\n      \"reference\": \"{{reference}}\",\n      \"customer_email\": \"cliente@example.com\",\n      \"currency\": \"COP\",\n      \"payment_method_type\": \"NEQUI\",\n      \"status\": \"APPROVED\"\n    }\n  },\n  \"environment\": \"test\",\n  \"signature\": {\n    \"properties\": [\n      \"transaction.id\",\n      \"transaction.status\",\n      \"transaction.amount_in_cents\"\n    ],\n    \"checksum\": \"REEMPLAZA-ESTE-VALOR-CON-EL-CHECKSUM-CALCULADO\"\n  },\n  \"timestamp\": 1530291411,\n  \"sent_at\": \"2018-07-20T16:45:05.000Z\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Health check",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET /health/db",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health/db",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health",
+                "db"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

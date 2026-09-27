@@ -1,0 +1,11 @@
+# Config deliberadamente permisiva: el objetivo de esta primera versión
+# de CI es atrapar errores reales (imports rotos, variables no
+# definidas, sintaxis inválida), no reformatear un proyecto grande que
+# nunca se escribió pensando en ruff. Ajusta `select` para ser más
+# estricto cuando el equipo lo decida.
+line-length = 120
+target-version = "py312"
+
+[lint]
+select = ["E9", "F"]  # errores de sintaxis + pyflakes (imports/variables no usadas o no definidas)
+ignore = ["F401"]     # imports "sin usar" muy comunes aquí solo para registrar modelos en SQLAlchemy
