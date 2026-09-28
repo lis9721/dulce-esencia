@@ -163,7 +163,7 @@ function Tienda() {
         const reales = respuesta.datos || [];
         const combinados = reales.map((p) => {
           const carouselItem = carouselData.find((c) => c.titulo === p.titulo);
-          const usarFotoLocal = carouselItem && p.imagen && p.imagen.includes("-");
+          const usarFotoLocal = Boolean(carouselItem);
           // Notar que en Tienda.jsx, TarjetaProducto usa resolverUrlImagen internamente, así que aquí 
           // solo necesitamos reemplazar el valor del string `imagen` y dejar que la tarjeta lo resuelva,
           // o podemos resolverlo aquí. Ya que TarjetaProducto hace `resolverUrlImagen(producto.imagen)`,
