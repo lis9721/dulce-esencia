@@ -30,6 +30,12 @@ const formateadorCOP = new Intl.NumberFormat("es-CO", {
  *     el ícono de repuesto cuando el archivo no existe).
  */
 export function resolverUrlImagen(ruta) {
+  if (!ruta) return ruta;
+  if (/^https?:\/\//i.test(ruta)) return ruta;
+  // Si es un nombre de archivo suelto de la BD original
+  if (!ruta.startsWith("/") && !ruta.startsWith("data:")) {
+    return `/uploads/productos/${ruta}`;
+  }
   return ruta;
 }
 
