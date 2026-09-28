@@ -111,8 +111,9 @@ function Index() {
           setCatalogo(
             reales.map((p) => {
               const carouselItem = carouselData.find((c) => c.titulo === p.titulo);
-              // Si la API devuelve la ilustración del seed y tenemos la foto, usamos la foto.
-              const usarFotoLocal = carouselItem && p.imagen && !p.imagen.startsWith("/uploads/") && !p.imagen.startsWith("http");
+              // Si la API devuelve la ilustración del seed (que contiene guiones, ej. torta-fresas-crema.jpg)
+              // y tenemos la foto local, usamos la foto. Las fotos reales subidas usan uuid.hex (sin guiones).
+              const usarFotoLocal = carouselItem && p.imagen && p.imagen.includes("-");
               return { ...p, imagen: usarFotoLocal ? carouselItem.imagen : resolverUrlImagen(p.imagen) };
             })
           );
@@ -120,7 +121,7 @@ function Index() {
           // Si hay menos de 3, completamos con el carouselData para no romper el layout del Bento
           const combinados = reales.map((p) => {
             const carouselItem = carouselData.find((c) => c.titulo === p.titulo);
-            const usarFotoLocal = carouselItem && p.imagen && !p.imagen.startsWith("/uploads/") && !p.imagen.startsWith("http");
+            const usarFotoLocal = carouselItem && p.imagen && p.imagen.includes("-");
             return { ...p, imagen: usarFotoLocal ? carouselItem.imagen : resolverUrlImagen(p.imagen) };
           });
           const faltantes = 3 - reales.length;
