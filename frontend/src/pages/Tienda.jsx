@@ -9,6 +9,7 @@ import FAMILIAS_PRODUCTO from "../constants/familiasProducto";
 import { formatearPrecio, resolverUrlImagen } from "../utils/formato";
 import { listarProductos } from "../utils/api";
 import useDocumentTitle from "../hooks/useDocumentTitle";
+import carouselData from "../data/carouselData";
 
 const PRODUCTOS_POR_PAGINA = 12;
 
@@ -159,7 +160,18 @@ function Tienda() {
       orden: filtros.orden,
     })
       .then((respuesta) => {
-        setProductos(respuesta.datos);
+        const reales = respuesta.datos || [];
+        const combinados = reales.map((p) => {
+          const carouselItem = carouselData.find((c) => c.id === p.id);
+          const usarFotoLocal = carouselItem && p.imagen && !p.imagen.startsWith("/uploads/") && !p.imagen.startsWith("http");
+          // Notar que en Tienda.jsx, TarjetaProducto usa resolverUrlImagen internamente, así que aquí 
+          // solo necesitamos reemplazar el valor del string `imagen` y dejar que la tarjeta lo resuelva,
+          // o podemos resolverlo aquí. Ya que TarjetaProducto hace `resolverUrlImagen(producto.imagen)`,
+          // y carouselItem.imagen ya está resuelto (es un path absoluto http o /uploads completo),
+          // al pasar a resolverUrlImagen volverá a funcionar igual.
+          return { ...p, imagen: usarFotoLocal ? carouselItem.imagen : p.imagen };
+        });
+        setProductos(combinados);
         setPaginacion(respuesta.paginacion);
       })
       .catch((err) => setError(err.message || "No se pudo cargar el catálogo. Intenta de nuevo."))

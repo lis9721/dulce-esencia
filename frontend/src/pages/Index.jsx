@@ -109,11 +109,20 @@ function Index() {
         const reales = respuesta.datos || [];
         if (reales.length >= 3) {
           setCatalogo(
-            reales.map((p) => ({ ...p, imagen: resolverUrlImagen(p.imagen) }))
+            reales.map((p) => {
+              const carouselItem = carouselData.find((c) => c.id === p.id);
+              // Si la API devuelve la ilustración del seed y tenemos la foto, usamos la foto.
+              const usarFotoLocal = carouselItem && p.imagen && !p.imagen.startsWith("/uploads/") && !p.imagen.startsWith("http");
+              return { ...p, imagen: usarFotoLocal ? carouselItem.imagen : resolverUrlImagen(p.imagen) };
+            })
           );
         } else if (reales.length > 0) {
           // Si hay menos de 3, completamos con el carouselData para no romper el layout del Bento
-          const combinados = reales.map((p) => ({ ...p, imagen: resolverUrlImagen(p.imagen) }));
+          const combinados = reales.map((p) => {
+            const carouselItem = carouselData.find((c) => c.id === p.id);
+            const usarFotoLocal = carouselItem && p.imagen && !p.imagen.startsWith("/uploads/") && !p.imagen.startsWith("http");
+            return { ...p, imagen: usarFotoLocal ? carouselItem.imagen : resolverUrlImagen(p.imagen) };
+          });
           const faltantes = 3 - reales.length;
           setCatalogo([...combinados, ...carouselData.slice(0, faltantes)]);
         }
