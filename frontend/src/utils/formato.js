@@ -29,12 +29,7 @@ const formateadorCOP = new Intl.NumberFormat("es-CO", {
  *     subida real — esos se dejan tal cual (ver nota en README sobre
  *     el ícono de repuesto cuando el archivo no existe).
  */
-const ORIGEN_API = (import.meta.env.VITE_API_URL || "http://localhost:8000/api").replace(/\/api\/?$/, "");
-
 export function resolverUrlImagen(ruta) {
-  if (!ruta) return ruta;
-  if (/^https?:\/\//i.test(ruta)) return ruta;
-  if (ruta.startsWith("/uploads/")) return `${ORIGEN_API}${ruta}`;
   return ruta;
 }
 
