@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Paginacion from "../../components/ui/Paginacion";
 import { listarPedidos, cambiarEstadoPedido } from "../../utils/api";
-import { formatearPrecio, formatearFecha, obtenerEstadoPedido } from "../../utils/formato";
+import { formatearPrecio, formatearFecha, obtenerEstadoPedido, obtenerMetodoPago } from "../../utils/formato";
 
 const PEDIDOS_POR_PAGINA = 10;
 const ESTADOS = ["pendiente", "pagado", "enviado", "entregado", "cancelado"];
@@ -94,6 +94,7 @@ function GestionPedidos() {
                 <th className="py-2 pr-3">Pedido</th>
                 <th className="py-2 pr-3">Cliente</th>
                 <th className="py-2 pr-3">Fecha</th>
+                <th className="py-2 pr-3">Método</th>
                 <th className="py-2 pr-3 text-right">Total</th>
                 <th className="py-2 pr-3">Estado</th>
                 <th className="py-2 pr-3" aria-label="Acciones" />
@@ -102,11 +103,18 @@ function GestionPedidos() {
             <tbody>
               {pedidos.map((pedido) => {
                 const esTerminal = ESTADOS_TERMINALES.includes(pedido.estado);
+                const metodo = obtenerMetodoPago(pedido.metodoPago);
                 return (
                   <tr key={pedido.id} className="border-b border-beige/30">
                     <td className="py-2 pr-3 font-medium text-primary">#{pedido.id}</td>
                     <td className="py-2 pr-3 text-primary/70">{pedido.correoUsuario}</td>
                     <td className="py-2 pr-3 text-primary/70">{formatearFecha(pedido.creadoEn)}</td>
+                    <td className="py-2 pr-3">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium border ${metodo.badgeClase}`}>
+                        <span>{metodo.icono}</span>
+                        <span>{metodo.nombre}</span>
+                      </span>
+                    </td>
                     <td className="py-2 pr-3 text-right font-medium text-primary">
                       {formatearPrecio(pedido.total)}
                     </td>

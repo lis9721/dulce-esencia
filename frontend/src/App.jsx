@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -15,6 +15,7 @@ import VerificarCorreo from "./pages/VerificarCorreo";
 import Carrito from "./pages/Carrito";
 import Checkout from "./pages/Checkout";
 import PagoResultado from "./pages/PagoResultado";
+import WompiCheckoutSimulador from "./pages/WompiCheckoutSimulador";
 import PedidoDetalle from "./pages/PedidoDetalle";
 import Panel from "./pages/Panel";
 import MiPerfil from "./pages/panel/MiPerfil";
@@ -31,15 +32,28 @@ import Facturas from "./pages/panel/Facturas";
 import GestionPQR from "./pages/panel/GestionPQR";
 import { ROLES_PANEL } from "./constants/rolesPanel";
 
-function App() {
+/**
+ * Contenido de la app. Vive separado de <App> porque necesita
+ * useLocation(), que solo funciona DENTRO de <BrowserRouter>.
+ *
+ * Dentro de /panel (cualquier panel de usuario: cliente, empleado o
+ * admin) NO se muestran el Header, el Footer, el botón de WhatsApp ni
+ * el Chatbot de la tienda: el panel trae su propio layout (sidebar +
+ * barra superior, ver pages/Panel.jsx) y desde ahí se vuelve a la
+ * tienda con el enlace "Ir a la tienda".
+ */
+function AppContenido() {
+  const { pathname } = useLocation();
+  const enPanel = pathname === "/panel" || pathname.startsWith("/panel/");
+
   return (
-    <BrowserRouter>
+    <>
       <a href="#contenido-principal" className="saltar-al-contenido">
         Saltar al contenido
       </a>
-      <Header />
+      {!enPanel && <Header />}
       <ErrorBoundary>
-        <main id="contenido-principal">
+        <main id="contenido-principal" className={enPanel ? "flex-1" : undefined}>
         <Routes>
           <Route path="/" element={<Index />} />
           {/* Pública, sin ProtectedRoute: cualquiera (invitado, cliente,
@@ -78,6 +92,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <PagoResultado />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/pago/simulador"
+            element={
+              <ProtectedRoute>
+                <WompiCheckoutSimulador />
               </ProtectedRoute>
             }
           />
@@ -184,9 +206,17 @@ function App() {
         </Routes>
         </main>
       </ErrorBoundary>
-      <Footer />
-      <WhatsAppButton />
-      <Chatbot />
+      {!enPanel && <Footer />}
+      {!enPanel && <WhatsAppButton />}
+      {!enPanel && <Chatbot />}
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContenido />
     </BrowserRouter>
   );
 }

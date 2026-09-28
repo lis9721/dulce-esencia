@@ -28,8 +28,8 @@ from app.config import get_settings
 logger = logging.getLogger("app.services.notificaciones")
 
 
-def enviar_correo(destino: str, asunto: str, cuerpo: str) -> bool:
-    """Envía un correo de texto plano. Devuelve True si se envió por SMTP."""
+def enviar_correo(destino: str, asunto: str, cuerpo: str, cuerpo_html: str = None) -> bool:
+    """Envía un correo de texto plano (y opcionalmente HTML). Devuelve True si se envió por SMTP."""
     settings = get_settings()
 
     if not settings.SMTP_HOST:
@@ -41,13 +41,22 @@ def enviar_correo(destino: str, asunto: str, cuerpo: str) -> bool:
     mensaje["To"] = destino
     mensaje["Subject"] = asunto
     mensaje.set_content(cuerpo)
+    
+    if cuerpo_html:
+        mensaje.add_alternative(cuerpo_html, subtype="html")
 
     try:
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as servidor:
-            servidor.starttls()
-            if settings.SMTP_USER:
-                servidor.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            servidor.send_message(mensaje)
+        if settings.SMTP_PORT == 465:
+            with smtplib.SMTP_SSL(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as servidor:
+                if settings.SMTP_USER:
+                    servidor.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                servidor.send_message(mensaje)
+        else:
+            with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=10) as servidor:
+                servidor.starttls()
+                if settings.SMTP_USER:
+                    servidor.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
+                servidor.send_message(mensaje)
     except (smtplib.SMTPException, OSError):
         logger.exception("correo_fallido destino=%s asunto=%s", destino, asunto)
         return False
@@ -75,15 +84,63 @@ def enviar_recuperacion_password(correo: str, nombre: str, codigo: str, minutos_
     """Envía el código OTP de 6 dígitos para restablecer la contraseña.
     Reemplaza al enlace de recuperación anterior: el usuario ahora
     escribe el código a mano en /restablecer-password."""
-    enviar_correo(
-        correo,
-        "Tu código para restablecer tu contraseña de Dulce Esencia Pastelería",
+    
+    asunto = "Tu código para restablecer tu contraseña de Dulce Esencia Pastelería"
+    
+    cuerpo = (
         f"Hola {nombre},\n\n"
         "Recibimos una solicitud para restablecer tu contraseña. Usa este código "
         f"(vigente por {minutos_vigencia} minutos):\n\n"
         f"    {codigo}\n\n"
         "No compartas este código con nadie. Si no fuiste tú, ignora este mensaje: "
-        "tu contraseña actual sigue funcionando.",
+        "tu contraseña actual sigue funcionando."
+    )
+    
+    cuerpo_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fcf9f2; margin: 0; padding: 0; color: #4a3b32; }}
+            .container {{ max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }}
+            .header {{ background-color: #d2a679; padding: 30px; text-align: center; color: #ffffff; }}
+            .header h1 {{ margin: 0; font-size: 24px; font-weight: 600; letter-spacing: 1px; }}
+            .content {{ padding: 40px; text-align: center; }}
+            .content p {{ font-size: 16px; line-height: 1.6; margin-bottom: 20px; }}
+            .code-box {{ background-color: #fcf9f2; border: 2px dashed #d2a679; border-radius: 8px; padding: 20px; margin: 30px 0; font-size: 36px; font-weight: bold; color: #d2a679; letter-spacing: 8px; }}
+            .footer {{ background-color: #f8f5f0; padding: 20px; text-align: center; font-size: 13px; color: #8e7f77; border-top: 1px solid #efeae4; }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">
+                <h1>DULCE ESENCIA</h1>
+            </div>
+            <div class="content">
+                <h2>Recuperación de contraseña</h2>
+                <p>Hola <strong>{nombre}</strong>,</p>
+                <p>Recibimos una solicitud para restablecer tu contraseña. Usa el siguiente código de seguridad (vigente por {minutos_vigencia} minutos):</p>
+                
+                <div class="code-box">{codigo}</div>
+                
+                <p style="font-size: 14px; color: #8e7f77;">Por tu seguridad, no compartas este código con nadie.</p>
+                <p style="font-size: 14px; color: #8e7f77;">Si no solicitaste restablecer tu contraseña, puedes ignorar este mensaje sin problema.</p>
+            </div>
+            <div class="footer">
+                &copy; {{{{ new Date().getFullYear() }}}} Dulce Esencia Pastelería.<br>
+                Hecho con amor.
+            </div>
+        </div>
+    </body>
+    </html>
+    """.replace("{{ new Date().getFullYear() }}", "2026")
+
+    enviar_correo(
+        destino=correo,
+        asunto=asunto,
+        cuerpo=cuerpo,
+        cuerpo_html=cuerpo_html
     )
 
 

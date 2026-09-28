@@ -44,19 +44,12 @@ function RecoverPassword({ onVolver }) {
       // El backend siempre responde con el mismo mensaje exista o no el
       // correo, para no revelar qué cuentas están registradas.
       await recuperarPassword({ correo });
-      setEnviado(true);
+      navigate(`/restablecer-password?correo=${encodeURIComponent(correo)}&enviado=1`);
     } catch (err) {
       setErrorServidor(err.message);
     } finally {
       setEnviando(false);
     }
-  };
-
-  // Lleva a la persona al formulario donde escribe el código de 6
-  // dígitos (OTP) junto con su contraseña nueva, con el correo ya
-  // precargado — así no tiene que volver a escribirlo.
-  const handleContinuar = () => {
-    navigate(`/restablecer-password?correo=${encodeURIComponent(correo)}`);
   };
 
   if (enviado) {

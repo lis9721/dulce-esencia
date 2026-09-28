@@ -38,10 +38,24 @@ class MensajeSalida(BaseModel):
     creado_en: datetime | None = None
 
 
+class ProductoChat(BaseModel):
+    """Tarjeta de producto que el chat muestra con botón «Añadir al carrito»."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    titulo: str
+    precio: float
+    stock: int
+    imagen: str | None = None
+
+
 class ChatbotMensajeSalida(BaseModel):
     conversacion_id: int
     respuesta: str
     pqr_creada_id: int | None = None
+    # Productos sugeridos (máx. 3) para mostrar como tarjetas en el chat.
+    productos: list[ProductoChat] = []
     # "ia" = respondió el proveedor de IA; "local" = chatbot gratuito por reglas.
     origen: str = "ia"
 

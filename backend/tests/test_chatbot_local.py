@@ -157,3 +157,91 @@ def test_si_el_proveedor_de_ia_falla_responde_el_bot_local(cliente, catalogo, mo
     r = cliente.post("/api/chatbot/mensaje", json={"mensaje": "quiero ver las tortas"})
     assert r.status_code == 200
     assert r.json()["origen"] == "local" and "Torta de Fresas y Crema" in r.json()["respuesta"]
+
+
+# ---------------------------------------------------------------------------
+# Funcionalidades nuevas: contexto real para la IA, pedidos y tarjetas de producto
+# ---------------------------------------------------------------------------
+
+SIN_API_KEY = lambda: type("S", (), {"OPENAI_API_KEY": "", "OPENAI_BASE_URL": "", "OPENAI_MODEL": "x"})()  # noqa: E731
+
+
+def _crear_pedido(db_session, usuario, estado="enviado", total=78000):
+    from app.models.pedido import EstadoPedido, MetodoPago, Pedido
+
+    pedido = Pedido(
+        usuario_id=usuario.id,
+        estado=EstadoPedido(estado),
+        subtotal=total,
+        descuento=0,
+        total=total,
+        direccion_envio="Calle 1 # 2-3",
+        telefono_contacto="3001234567",
+        metodo_pago=MetodoPago.transferencia,
+    )
+    db_session.add(pedido)
+    db_session.commit()
+    db_session.refresh(pedido)
+    return pedido
+
+
+def test_contexto_de_la_ia_trae_catalogo_activo_y_no_pedidos_de_un_visitante(db_session, catalogo):
+    from app.services.chatbot.contexto import construir_contexto
+
+    contexto = construir_contexto(db_session, None)
+    assert "Torta de Fresas y Crema" in contexto and "$78.000 COP" in contexto
+    assert "Cupcakes de Vainilla" not in contexto  # inactivo
+    assert "VISITANTE SIN SESIÓN" in contexto and "Pedido #" not in contexto
+
+
+def test_contexto_solo_incluye_los_pedidos_del_propio_usuario(db_session, catalogo, crear_usuario):
+    from app.services.chatbot.contexto import construir_contexto
+
+    ana = crear_usuario(correo="ana@example.com")
+    beto = crear_usuario(correo="beto@example.com")
+    pedido_ana = _crear_pedido(db_session, ana, estado="enviado")
+    pedido_beto = _crear_pedido(db_session, beto, estado="pagado", total=36000)
+
+    contexto = construir_contexto(db_session, ana)
+    assert f"Pedido #{pedido_ana.id}" in contexto and "enviado" in contexto
+    assert f"Pedido #{pedido_beto.id}" not in contexto
+
+
+def test_bot_local_informa_el_estado_de_los_pedidos_del_usuario(db_session, crear_usuario):
+    ana = crear_usuario(correo="ana@example.com")
+    pedido = _crear_pedido(db_session, ana, estado="enviado")
+
+    r = responder_localmente(db_session, "¿cómo va mi pedido?", ana)
+    assert f"Pedido #{pedido.id}" in r and "enviado" in r
+
+
+def test_bot_local_pide_iniciar_sesion_para_ver_pedidos(db_session):
+    assert "Inicia sesión" in responder_localmente(db_session, "¿cómo va mi pedido?")
+
+
+def test_endpoint_devuelve_tarjetas_de_producto_para_comprar_desde_el_chat(cliente, catalogo, monkeypatch):
+    monkeypatch.setattr("app.services.chatbot.ai_service.get_settings", SIN_API_KEY)
+    r = cliente.post("/api/chatbot/mensaje", json={"mensaje": "quiero ver las tortas"})
+    assert r.status_code == 200
+    productos = r.json()["productos"]
+    assert {p["titulo"] for p in productos} == {"Torta de Fresas y Crema", "Torta Tres Leches"}
+    assert all({"id", "titulo", "precio", "stock", "imagen"} <= set(p) for p in productos)
+
+
+def test_endpoint_no_devuelve_tarjetas_si_el_mensaje_no_habla_de_catalogo(cliente, catalogo, monkeypatch):
+    monkeypatch.setattr("app.services.chatbot.ai_service.get_settings", SIN_API_KEY)
+    r = cliente.post("/api/chatbot/mensaje", json={"mensaje": "hola"})
+    assert r.status_code == 200 and r.json()["productos"] == []
+
+
+def test_la_ia_recibe_el_contexto_real_de_la_tienda(cliente, catalogo, monkeypatch):
+    capturado = {}
+
+    def falsa_generar(historial, contexto=""):
+        capturado["contexto"] = contexto
+        return "Te recomiendo la Torta de Fresas y Crema."
+
+    monkeypatch.setattr("app.routes.chatbot.generar_respuesta", falsa_generar)
+    r = cliente.post("/api/chatbot/mensaje", json={"mensaje": "¿qué me recomiendas?"})
+    assert r.status_code == 200 and r.json()["origen"] == "ia"
+    assert "Torta de Fresas y Crema" in capturado["contexto"]

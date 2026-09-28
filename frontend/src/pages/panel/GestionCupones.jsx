@@ -57,6 +57,19 @@ function aFormatoDatetimeLocal(valorMysql) {
   return valorMysql.replace(" ", "T").slice(0, 16);
 }
 
+/**
+ * "YYYY-MM-DDTHH:mm" del momento actual, en hora local del navegador
+ * (igual formato que necesita <input type="datetime-local">). Se usa
+ * como `min` para que el calendario no deje elegir una fecha/hora ya
+ * pasada al crear un cupón nuevo.
+ */
+function ahoraFormatoDatetimeLocal() {
+  const ahora = new Date();
+  ahora.setSeconds(0, 0);
+  ahora.setMinutes(ahora.getMinutes() - ahora.getTimezoneOffset());
+  return ahora.toISOString().slice(0, 16);
+}
+
 function describirVigencia(cupon) {
   const ahora = new Date();
   const desde = new Date(cupon.validoDesde);
@@ -373,6 +386,7 @@ function FormularioCupon({ cupon, onGuardado }) {
           name="validoDesde"
           type="datetime-local"
           required
+          min={ahoraFormatoDatetimeLocal()}
           value={values.validoDesde}
           onChange={handleChange}
           onBlur={handleBlur}
@@ -384,6 +398,7 @@ function FormularioCupon({ cupon, onGuardado }) {
           name="validoHasta"
           type="datetime-local"
           required
+          min={values.validoDesde || ahoraFormatoDatetimeLocal()}
           value={values.validoHasta}
           onChange={handleChange}
           onBlur={handleBlur}

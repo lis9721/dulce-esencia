@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { enviarMensajeChatbot, obtenerConversacionChatbot } from "../utils/api";
+import { useCart } from "../hooks/useCart";
+import { formatearPrecio, resolverUrlImagen } from "../utils/formato";
 
 /**
  * Chatbot
@@ -11,6 +14,15 @@ import { enviarMensajeChatbot, obtenerConversacionChatbot } from "../utils/api";
  * guarda un `sesionId` propio en localStorage para poder mantener el
  * mismo hilo de conversación entre mensajes (ver
  * backend/app/routes/chatbot.py).
+ *
+ * Funcionalidades:
+ *  - Respuestas rápidas (chips) para las consultas más comunes.
+ *  - Tarjetas de producto con «Añadir al carrito» directo desde el chat
+ *    (el backend las manda en `productos` cuando el mensaje habla de
+ *    catálogo).
+ *  - Rutas internas del sitio en la respuesta (/tienda, /carrito,
+ *    /panel/...) se vuelven enlaces clicables.
+ *  - «Nueva conversación» para empezar de cero.
  */
 
 const CLAVE_SESION = "essentia_chat_sesion";
@@ -28,15 +40,80 @@ function obtenerSesionId() {
 const MENSAJE_BIENVENIDA = {
   rol: "asistente",
   contenido:
-    "¡Hola! Soy el asistente virtual de Dulce Esencia Pastelería. Puedo ayudarte con dudas sobre productos, servicios, el proceso de compra o registrar una PQR. ¿En qué te ayudo?",
+    "¡Hola! Soy el asistente virtual de Dulce Esencia Pastelería. Puedo recomendarte productos, contarte el estado de tus pedidos, resolver dudas de compra o registrar una PQR. ¿En qué te ayudo?",
 };
 
+const RESPUESTAS_RAPIDAS = [
+  "¿Qué tortas tienen?",
+  "Quiero algo para 10 personas",
+  "¿Cómo puedo pagar?",
+  "¿Cómo va mi pedido?",
+  "Tengo una queja",
+];
+
+// Rutas internas que el asistente puede mencionar; se enlazan con el router.
+const REGEX_RUTAS = /(\/(?:tienda|carrito|checkout|contacto|quienes-somos|panel(?:\/[a-z-]+)?))(?![\w/-])/g;
+
+function TextoConEnlaces({ texto, onNavegar }) {
+  const partes = texto.split(REGEX_RUTAS);
+  return partes.map((parte, i) =>
+    i % 2 === 1 ? (
+      <Link key={i} to={parte} onClick={onNavegar} className="font-semibold text-accent underline underline-offset-2">
+        {parte}
+      </Link>
+    ) : (
+      <span key={i}>{parte}</span>
+    )
+  );
+}
+
+function TarjetaProducto({ producto, onAgregar, estado }) {
+  const agotado = Number(producto.stock) <= 0;
+  const etiqueta = agotado
+    ? "Agotado"
+    : estado === "agregando"
+      ? "Añadiendo..."
+      : estado === "agregado"
+        ? "¡Añadido!"
+        : estado === "error"
+          ? "Reintentar"
+          : "Añadir al carrito";
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-beige/70 bg-cream p-2">
+      {producto.imagen && (
+        <img
+          src={resolverUrlImagen(producto.imagen)}
+          alt=""
+          loading="lazy"
+          className="h-14 w-14 shrink-0 rounded-lg object-cover"
+        />
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold text-primary">{producto.titulo}</p>
+        <p className="text-xs text-primary/70">{formatearPrecio(producto.precio)}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => onAgregar(producto)}
+        disabled={agotado || estado === "agregando"}
+        className="shrink-0 rounded-lg bg-primary px-2.5 py-1.5 text-xs font-semibold text-cream transition hover:bg-primary-dark disabled:opacity-50"
+      >
+        {etiqueta}
+      </button>
+    </div>
+  );
+}
+
 function Chatbot() {
+  const { agregar } = useCart();
   const [abierto, setAbierto] = useState(false);
   const [mensajes, setMensajes] = useState([MENSAJE_BIENVENIDA]);
   const [texto, setTexto] = useState("");
   const [enviando, setEnviando] = useState(false);
   const [error, setError] = useState("");
+  // Estado del botón «Añadir» de cada producto: { [id]: "agregando" | "agregado" | "error" }
+  const [estadoAgregar, setEstadoAgregar] = useState({});
   const conversacionIdRef = useRef(
     typeof window !== "undefined" ? sessionStorage.getItem(CLAVE_CONVERSACION) : null
   );
@@ -49,8 +126,7 @@ function Chatbot() {
 
   // Restaura el historial de la conversación (mismo hilo guardado en
   // sessionStorage) la primera vez que se abre el widget, en vez de
-  // mostrar siempre el mensaje de bienvenida solo: `obtenerConversacionChatbot`
-  // ya existía en utils/api.js pero nunca se llamaba desde acá.
+  // mostrar siempre el mensaje de bienvenida solo.
   useEffect(() => {
     if (!abierto || restauradaRef.current || !conversacionIdRef.current) return;
     restauradaRef.current = true;
@@ -75,25 +151,27 @@ function Chatbot() {
       });
   }, [abierto]);
 
-  const enviar = async (evento) => {
-    evento.preventDefault();
-    const mensaje = texto.trim();
-    if (!mensaje || enviando) return;
+  const enviarTexto = async (mensaje) => {
+    const limpio = mensaje.trim();
+    if (!limpio || enviando) return;
 
-    setMensajes((prev) => [...prev, { rol: "usuario", contenido: mensaje }]);
+    setMensajes((prev) => [...prev, { rol: "usuario", contenido: limpio }]);
     setTexto("");
     setEnviando(true);
     setError("");
 
     try {
       const respuesta = await enviarMensajeChatbot({
-        mensaje,
+        mensaje: limpio,
         conversacionId: conversacionIdRef.current || undefined,
         sesionId: obtenerSesionId(),
       });
       conversacionIdRef.current = respuesta.conversacionId;
       sessionStorage.setItem(CLAVE_CONVERSACION, String(respuesta.conversacionId));
-      setMensajes((prev) => [...prev, { rol: "asistente", contenido: respuesta.respuesta }]);
+      setMensajes((prev) => [
+        ...prev,
+        { rol: "asistente", contenido: respuesta.respuesta, productos: respuesta.productos || [] },
+      ]);
     } catch (err) {
       setError(err.message || "No se pudo enviar el mensaje. Intenta de nuevo.");
     } finally {
@@ -101,38 +179,117 @@ function Chatbot() {
     }
   };
 
+  const enviar = (evento) => {
+    evento.preventDefault();
+    enviarTexto(texto);
+  };
+
+  const agregarDesdeChat = async (producto) => {
+    setEstadoAgregar((prev) => ({ ...prev, [producto.id]: "agregando" }));
+    try {
+      await agregar(producto, 1);
+      setEstadoAgregar((prev) => ({ ...prev, [producto.id]: "agregado" }));
+      setTimeout(() => {
+        setEstadoAgregar((prev) => ({ ...prev, [producto.id]: undefined }));
+      }, 1800);
+    } catch {
+      setEstadoAgregar((prev) => ({ ...prev, [producto.id]: "error" }));
+    }
+  };
+
+  const nuevaConversacion = () => {
+    conversacionIdRef.current = null;
+    restauradaRef.current = true;
+    sessionStorage.removeItem(CLAVE_CONVERSACION);
+    setMensajes([MENSAJE_BIENVENIDA]);
+    setEstadoAgregar({});
+    setError("");
+  };
+
+  const soloBienvenida = mensajes.length === 1;
+
   return (
     <>
       {abierto && (
-        <div className="fixed bottom-24 right-5 z-50 flex h-[28rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-beige/60 bg-cream shadow-2xl">
+        <div className="fixed bottom-24 right-5 z-50 flex h-[32rem] max-h-[calc(100vh-7rem)] w-[23rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-beige/60 bg-cream shadow-2xl">
           <header className="flex items-center justify-between bg-primary px-4 py-3 text-cream">
             <div>
               <p className="text-sm font-semibold">Asistente Dulce Esencia</p>
               <p className="text-xs opacity-80">Atención con IA</p>
             </div>
-            <button
-              type="button"
-              aria-label="Cerrar chat"
-              onClick={() => setAbierto(false)}
-              className="rounded-full p-1 text-cream/80 hover:bg-cream/10 hover:text-cream"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-1">
+              {!soloBienvenida && (
+                <button
+                  type="button"
+                  onClick={nuevaConversacion}
+                  className="rounded-full px-2 py-1 text-xs text-cream/80 hover:bg-cream/10 hover:text-cream"
+                >
+                  Nueva
+                </button>
+              )}
+              <button
+                type="button"
+                aria-label="Cerrar chat"
+                onClick={() => setAbierto(false)}
+                className="rounded-full p-1 text-cream/80 hover:bg-cream/10 hover:text-cream"
+              >
+                ✕
+              </button>
+            </div>
           </header>
 
           <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
             {mensajes.map((m, indice) => (
-              <div
-                key={indice}
-                className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${
-                  m.rol === "usuario"
-                    ? "ml-auto bg-primary text-cream"
-                    : "bg-section text-primary/90"
-                }`}
-              >
-                {m.contenido}
+              <div key={indice} className={m.rol === "usuario" ? "flex justify-end" : "flex flex-col items-start gap-2"}>
+                <div
+                  className={`max-w-[88%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
+                    m.rol === "usuario" ? "bg-primary text-cream" : "bg-section text-primary/90"
+                  }`}
+                >
+                  {m.rol === "usuario" ? (
+                    m.contenido
+                  ) : (
+                    <TextoConEnlaces texto={m.contenido} onNavegar={() => setAbierto(false)} />
+                  )}
+                </div>
+                {m.productos?.length > 0 && (
+                  <div className="flex w-full max-w-[95%] flex-col gap-2">
+                    {m.productos.map((producto) => (
+                      <TarjetaProducto
+                        key={producto.id}
+                        producto={producto}
+                        estado={estadoAgregar[producto.id]}
+                        onAgregar={agregarDesdeChat}
+                      />
+                    ))}
+                    <Link
+                      to="/carrito"
+                      onClick={() => setAbierto(false)}
+                      className="text-xs font-semibold text-accent underline underline-offset-2"
+                    >
+                      Ver mi carrito
+                    </Link>
+                  </div>
+                )}
               </div>
             ))}
+
+            {soloBienvenida && (
+              <div className="flex flex-wrap gap-2">
+                {RESPUESTAS_RAPIDAS.map((sugerencia) => (
+                  <button
+                    key={sugerencia}
+                    type="button"
+                    onClick={() => enviarTexto(sugerencia)}
+                    disabled={enviando}
+                    className="rounded-full border border-accent/40 bg-cream px-3 py-1.5 text-xs font-medium text-accent-dark transition hover:bg-accent/10 disabled:opacity-50 dark:text-accent-soft"
+                  >
+                    {sugerencia}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {enviando && <p className="text-xs text-primary/70">Escribiendo...</p>}
             <div ref={finalRef} />
           </div>

@@ -1,3 +1,7 @@
+import { useState } from "react";
+import Icon from "./Icon";
+import ICON_PATHS from "./iconPaths";
+
 /**
  * Campo de texto reutilizable con etiqueta y mensaje de error.
  * El error solo se muestra si el campo ya fue "tocado" (touched),
@@ -7,6 +11,11 @@
  * caracteres ("12/60") junto a la etiqueta, para que el usuario sepa
  * de antemano cuánto puede escribir sin tener que adivinarlo o
  * enterarse recién al topar el límite.
+ *
+ * Cuando `type="password"`, se agrega un botón de "ojo" para
+ * mostrar/ocultar la contraseña en texto plano. El estado es interno
+ * (no se expone al padre): al tocar el ojo solo cambia el atributo
+ * `type` real del input entre "password" y "text".
  */
 function Input({
   label,
@@ -19,9 +28,14 @@ function Input({
   touched,
   placeholder,
   maxLength,
+  min,
+  max,
   required = false,
   autoComplete,
 }) {
+  const [mostrarPassword, setMostrarPassword] = useState(false);
+  const esPassword = type === "password";
+  const tipoReal = esPassword && mostrarPassword ? "text" : type;
   const tieneError = Boolean(touched && error);
   const tieneContador = typeof maxLength === "number" && maxLength > 0;
   const longitudActual = (value ?? "").toString().length;
@@ -49,26 +63,44 @@ function Input({
         </div>
       )}
 
-      <input
-        id={name}
-        name={name}
-        type={type}
-        value={value}
-        onChange={onChange}
-        onBlur={onBlur}
-        placeholder={placeholder}
-        maxLength={maxLength}
-        autoComplete={autoComplete}
-        aria-invalid={tieneError}
-        aria-describedby={
-          tieneError ? `${name}-error` : tieneContador ? `${name}-contador` : undefined
-        }
-        className={`rounded-lg border bg-cream px-3 py-2 text-sm text-primary outline-none transition focus:ring-2 ${
-          tieneError
-            ? "border-peligro-fuerte focus:border-peligro-fuerte focus:ring-peligro"
-            : "border-beige focus:border-primary focus:ring-primary/20"
-        }`}
-      />
+      <div className="relative">
+        <input
+          id={name}
+          name={name}
+          type={tipoReal}
+          value={value}
+          onChange={onChange}
+          onBlur={onBlur}
+          placeholder={placeholder}
+          maxLength={maxLength}
+          min={min}
+          max={max}
+          autoComplete={autoComplete}
+          aria-invalid={tieneError}
+          aria-describedby={
+            tieneError ? `${name}-error` : tieneContador ? `${name}-contador` : undefined
+          }
+          className={`w-full rounded-lg border bg-cream px-3 py-2 text-sm text-primary outline-none transition focus:ring-2 ${
+            esPassword ? "pr-10" : ""
+          } ${
+            tieneError
+              ? "border-peligro-fuerte focus:border-peligro-fuerte focus:ring-peligro"
+              : "border-beige focus:border-primary focus:ring-primary/20"
+          }`}
+        />
+        {esPassword && (
+          <button
+            type="button"
+            onClick={() => setMostrarPassword((actual) => !actual)}
+            aria-label={mostrarPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+            aria-pressed={mostrarPassword}
+            tabIndex={-1}
+            className="absolute inset-y-0 right-0 flex items-center px-3 text-primary/50 hover:text-primary"
+          >
+            <Icon path={mostrarPassword ? ICON_PATHS.eyeOff : ICON_PATHS.eye} className="h-5 w-5" />
+          </button>
+        )}
+      </div>
 
       {/* Anuncio accesible del conteo para lectores de pantalla, ya que
           el contador visual arriba tiene aria-hidden. */}

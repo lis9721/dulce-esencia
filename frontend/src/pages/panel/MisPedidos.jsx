@@ -4,7 +4,7 @@ import Icon from "../../components/ui/Icon";
 import ICON_PATHS from "../../components/ui/iconPaths";
 import Paginacion from "../../components/ui/Paginacion";
 import { listarPedidos, descargarFacturaPedido } from "../../utils/api";
-import { formatearPrecio, formatearFecha, obtenerEstadoPedido } from "../../utils/formato";
+import { formatearPrecio, formatearFecha, obtenerEstadoPedido, obtenerMetodoPago } from "../../utils/formato";
 
 const PEDIDOS_POR_PAGINA = 10;
 
@@ -84,6 +84,7 @@ function MisPedidos() {
               <tr className="border-b border-beige/60 text-primary/70">
                 <th className="py-2 pr-3">Pedido</th>
                 <th className="py-2 pr-3">Fecha</th>
+                <th className="py-2 pr-3">Método de pago</th>
                 <th className="py-2 pr-3">Estado</th>
                 <th className="py-2 pr-3 text-right">Total</th>
                 <th className="py-2 pr-3" aria-label="Acciones" />
@@ -92,10 +93,17 @@ function MisPedidos() {
             <tbody>
               {pedidos.map((pedido) => {
                 const estado = obtenerEstadoPedido(pedido.estado);
+                const metodo = obtenerMetodoPago(pedido.metodoPago);
                 return (
                   <tr key={pedido.id} className="border-b border-beige/30">
                     <td className="py-2 pr-3 font-medium text-primary">#{pedido.id}</td>
                     <td className="py-2 pr-3 text-primary/70">{formatearFecha(pedido.creadoEn)}</td>
+                    <td className="py-2 pr-3">
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium border ${metodo.badgeClase}`}>
+                        <span>{metodo.icono}</span>
+                        <span>{metodo.nombre}</span>
+                      </span>
+                    </td>
                     <td className="py-2 pr-3">
                       <span
                         className="rounded-full px-2.5 py-1 text-xs font-semibold"

@@ -26,6 +26,8 @@ from sqlalchemy.orm import Session
 
 from app.models.producto import FamiliaProducto, Producto
 from app.models.servicio import Servicio
+from app.models.usuario import Usuario
+from app.services.chatbot.contexto import linea_pedido, pedidos_recientes
 from app.utils.busqueda import CARACTER_ESCAPE, escapar_like
 
 MAX_RESULTADOS = 3
@@ -94,6 +96,20 @@ def _buscar_productos(db: Session, texto: str) -> list[Producto]:
     return []
 
 
+def productos_para_tarjetas(db: Session, mensaje: str) -> list[Producto]:
+    """
+    Productos activos que encajan con el mensaje, para mostrarlos como
+    tarjetas con botón «Añadir al carrito» en el chat. Se usa tanto si
+    responde la IA como el bot local, así el cliente siempre puede
+    comprar directo desde la conversación. Devuelve [] si el mensaje no
+    habla de catálogo.
+    """
+    texto = _normalizar(mensaje)
+    if es_intencion_pqr(texto):
+        return []
+    return _buscar_productos(db, texto)
+
+
 def _listar_productos(productos: list[Producto]) -> str:
     lineas = [f"• {p.titulo} — {_precio(p.precio)}" + ("" if p.stock > 0 else " (agotado)") for p in productos]
     return "\n".join(lineas)
@@ -123,7 +139,7 @@ def tipo_pqr_sugerido(texto_normalizado: str) -> str:
     return "queja"
 
 
-def responder_localmente(db: Session, mensaje: str) -> str:
+def responder_localmente(db: Session, mensaje: str, usuario: Usuario | None = None) -> str:
     """Devuelve una respuesta en español para `mensaje` sin usar ninguna API externa."""
     texto = _normalizar(mensaje)
 
@@ -147,10 +163,17 @@ def responder_localmente(db: Session, mensaje: str) -> str:
         )
 
     if _contiene(texto, ("pedido", "envio", "entrega", "domicilio", "rastrear", "seguimiento", "factura")):
-        return (
+        generico = (
             "Después de comprar puedes ver tus pedidos en tu panel, «Mis pedidos». Su estado pasa por "
             "pendiente → pagado → enviado → entregado, y desde allí descargas tu factura en PDF."
         )
+        if usuario is None:
+            return f"{generico} Inicia sesión y te cuento el estado de tus pedidos aquí mismo."
+        pedidos = pedidos_recientes(db, usuario, limite=3)
+        if not pedidos:
+            return "Todavía no tienes pedidos registrados. Puedes armar el primero desde la Tienda."
+        lineas = "\n".join(f"• {linea_pedido(p)}" for p in pedidos)
+        return f"Estos son tus últimos pedidos:\n{lineas}\nEl detalle y la factura en PDF están en /panel/mis-pedidos."
 
     if _contiene(texto, ("servicio", "asesoria", "personaliz", "cita", "encargo", "evento")):
         servicios = db.query(Servicio).filter(Servicio.activo.is_(True)).order_by(Servicio.orden.asc()).limit(MAX_RESULTADOS).all()

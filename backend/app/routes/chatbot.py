@@ -19,9 +19,16 @@ from app.database import get_db
 from app.models.chatbot import Conversacion, Mensaje, RolMensaje
 from app.models.pqr import PQR, EstadoPQR, TipoPQR
 from app.models.usuario import Usuario
-from app.schemas.chatbot import ChatbotMensajeEntrada, ChatbotMensajeSalida, ConversacionSalida
+from app.schemas.chatbot import ChatbotMensajeEntrada, ChatbotMensajeSalida, ConversacionSalida, ProductoChat
 from app.services.chatbot.ai_service import ChatbotNoConfigurado, generar_respuesta
-from app.services.chatbot.faq_service import _normalizar, es_intencion_pqr, responder_localmente, tipo_pqr_sugerido
+from app.services.chatbot.contexto import construir_contexto
+from app.services.chatbot.faq_service import (
+    _normalizar,
+    es_intencion_pqr,
+    productos_para_tarjetas,
+    responder_localmente,
+    tipo_pqr_sugerido,
+)
 from app.services.notificaciones import notificar_pqr_recibida
 
 # Descripción mínima que exige PQRCrear (ver app/schemas/pqr.py): un mensaje
@@ -119,10 +126,12 @@ def enviar_mensaje(
     # asistente NUNCA queda mudo ni depende de un servicio de pago.
     origen = "ia"
     try:
-        texto_respuesta = generar_respuesta(historial)
+        # La IA recibe los datos reales de la tienda (catálogo, servicios y,
+        # si hay sesión, los pedidos DE ESE usuario) para no inventar nada.
+        texto_respuesta = generar_respuesta(historial, construir_contexto(db, usuario))
     except ChatbotNoConfigurado:
         origen = "local"
-        texto_respuesta = responder_localmente(db, datos.mensaje)
+        texto_respuesta = responder_localmente(db, datos.mensaje, usuario)
 
     pqr_creada = _intentar_crear_pqr_desde_chat(db, background_tasks, datos.mensaje, usuario)
     if pqr_creada is not None:
@@ -131,6 +140,10 @@ def enviar_mensaje(
             "Un asesor la revisará y te responderá pronto; también te llegará un correo de confirmación. "
             "Puedes ver su estado en tu panel, sección «PQR»."
         )
+
+    # Tarjetas de producto para comprar desde el chat (no aplican si se acaba
+    # de escalar una PQR).
+    productos = [] if pqr_creada is not None else productos_para_tarjetas(db, datos.mensaje)
 
     mensaje_asistente = Mensaje(conversacion_id=conversacion.id, rol=RolMensaje.asistente, contenido=texto_respuesta)
     db.add(mensaje_asistente)
@@ -141,6 +154,7 @@ def enviar_mensaje(
         respuesta=texto_respuesta,
         origen=origen,
         pqr_creada_id=pqr_creada.id if pqr_creada is not None else None,
+        productos=[ProductoChat.model_validate(p) for p in productos],
     )
 
 

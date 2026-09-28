@@ -9,9 +9,9 @@ import { useAuth } from "../hooks/useAuth";
 import { formatearPrecio, formatearFecha, obtenerEstadoPedido } from "../utils/formato";
 
 const ETIQUETA_METODO_PAGO = {
-  tarjeta: "Tarjeta",
-  transferencia: "Transferencia",
-  contraentrega: "Pago contraentrega",
+  tarjeta: "Tarjeta de crédito / débito (Pasarela Wompi)",
+  transferencia: "Transferencia bancaria (Bancolombia / Nequi)",
+  contraentrega: "Pago contraentrega (Efectivo o Datáfono)",
 };
 
 function PedidoDetalle() {
@@ -21,6 +21,15 @@ function PedidoDetalle() {
   const { usuario } = useAuth();
   const [errorPago, setErrorPago] = useState(ubicacion.state?.errorPago || "");
   const [pagando, setPagando] = useState(false);
+  const [copiado, setCopiado] = useState("");
+
+  const copiarAlPortapapeles = (texto, clave) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(texto);
+      setCopiado(clave);
+      setTimeout(() => setCopiado(""), 2500);
+    }
+  };
 
   const [pedido, setPedido] = useState(null);
   const [cargando, setCargando] = useState(true);
@@ -83,6 +92,9 @@ function PedidoDetalle() {
   };
 
   const puedePagarConTarjeta = pedido.metodoPago === "tarjeta" && pedido.estado === "pendiente";
+  const esTransferenciaPendiente = pedido.metodoPago === "transferencia" && pedido.estado === "pendiente";
+  const esContraentregaPendiente = pedido.metodoPago === "contraentrega" && pedido.estado === "pendiente";
+  const esPagado = pedido.estado === "pagado";
 
   const handlePagar = async () => {
     setErrorPago("");
@@ -97,12 +109,18 @@ function PedidoDetalle() {
 
   return (
     <main className="mx-auto min-h-[60vh] max-w-2xl px-4 py-10 sm:px-6">
+      {/* 1. Tarjeta Wompi pendiente */}
       {puedePagarConTarjeta && (
-        <div className="mb-6 rounded-2xl bg-aviso px-5 py-4 text-aviso-fuerte">
-          <p className="font-semibold">Falta el pago de este pedido</p>
-          <p className="text-sm">Paga con tarjeta de forma segura en Wompi para que empecemos a prepararlo.</p>
+        <div className="mb-6 rounded-2xl bg-aviso px-5 py-5 text-aviso-fuerte border border-amber-300/60 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-xl">💳</span>
+            <div>
+              <p className="font-bold text-base">Falta el pago de este pedido</p>
+              <p className="text-xs mt-0.5">Paga con tarjeta de forma segura en Wompi para que empecemos a prepararlo.</p>
+            </div>
+          </div>
           {errorPago && (
-            <p role="alert" className="mt-2 text-sm text-peligro-fuerte">
+            <p role="alert" className="mt-2 text-sm text-peligro-fuerte bg-white/70 dark:bg-slate-900/60 p-2 rounded-lg">
               {errorPago}
             </p>
           )}
@@ -110,14 +128,146 @@ function PedidoDetalle() {
             type="button"
             onClick={handlePagar}
             disabled={pagando}
-            className="mt-3 rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="mt-4 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-dark disabled:opacity-60 shadow-md flex items-center gap-2"
           >
-            {pagando ? "Redirigiendo a Wompi..." : "Pagar con tarjeta"}
+            <span>🔒</span>
+            {pagando ? "Redirigiendo a Wompi..." : "Pagar con Wompi (Tarjeta / Sandbox)"}
           </button>
         </div>
       )}
 
-      {reciénCreado && !puedePagarConTarjeta && (
+      {/* 2. Transferencia bancaria pendiente */}
+      {esTransferenciaPendiente && (
+        <div className="mb-6 rounded-2xl border border-blue-200/80 bg-blue-50/80 dark:border-blue-900/60 dark:bg-blue-950/40 p-5 text-blue-950 dark:text-blue-100 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="text-2xl">🏦</span>
+            <div>
+              <h2 className="font-bold text-base text-blue-900 dark:text-blue-200">
+                Esperando transferencia bancaria
+              </h2>
+              <p className="text-xs text-blue-800/80 dark:text-blue-300/80">
+                Transfiere el valor exacto y envíanos tu comprobante para iniciar la preparación.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            {/* Bancolombia */}
+            <div className="rounded-xl bg-white/80 dark:bg-slate-900/70 p-3.5 border border-blue-200/60 dark:border-blue-900/40 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Bancolombia Ahorros</span>
+                  <span className="rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 text-[10px] font-bold">Cero costo</span>
+                </div>
+                <p className="font-mono text-sm font-semibold text-slate-900 dark:text-white mt-1">
+                  102-938475-12
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Dulce Esencia S.A.S. · NIT 901.458.789-1
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => copiarAlPortapapeles("10293847512", "cuentaBancolombia")}
+                className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+              >
+                {copiado === "cuentaBancolombia" ? "✓ ¡Copiado!" : "Copiar cuenta"}
+              </button>
+            </div>
+
+            {/* Nequi / Daviplata */}
+            <div className="rounded-xl bg-white/80 dark:bg-slate-900/70 p-3.5 border border-blue-200/60 dark:border-blue-900/40 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Nequi / Daviplata</span>
+                  <span className="rounded bg-purple-500/15 text-purple-700 dark:text-purple-300 px-1.5 py-0.5 text-[10px] font-bold">Inmediato</span>
+                </div>
+                <p className="font-mono text-sm font-semibold text-slate-900 dark:text-white mt-1">
+                  300 111 2233
+                </p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                  Titular: Valentina Ospina (Dulce Esencia)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => copiarAlPortapapeles("3001112233", "nequi")}
+                className="mt-2 inline-flex items-center justify-center gap-1.5 rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 transition"
+              >
+                {copiado === "nequi" ? "✓ ¡Copiado!" : "Copiar número"}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-blue-200/50 dark:border-blue-900/40 flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs">
+              <span className="text-slate-600 dark:text-slate-400 block">Total exacto a transferir:</span>
+              <span className="text-lg font-extrabold text-blue-900 dark:text-blue-200">
+                {formatearPrecio(pedido.total)}
+              </span>
+            </div>
+
+            <a
+              href={`https://wa.me/573001112233?text=${encodeURIComponent(
+                `Hola Dulce Esencia Pastelería 👋, adjunto comprobante de transferencia para el Pedido #${pedido.id} por valor de ${formatearPrecio(pedido.total)} a nombre de ${usuario?.nombre || "Cliente"}.`
+              )}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 text-xs transition shadow-sm"
+            >
+              <span>💬</span>
+              Enviar comprobante por WhatsApp
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* 3. Contraentrega pendiente */}
+      {esContraentregaPendiente && (
+        <div className="mb-6 rounded-2xl border border-amber-200/80 bg-amber-50/80 dark:border-amber-900/60 dark:bg-amber-950/40 p-5 text-amber-950 dark:text-amber-100 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <span className="text-2xl">🛵</span>
+            <div>
+              <h2 className="font-bold text-base text-amber-900 dark:text-amber-200">
+                Pedido confirmado — Pago contraentrega
+              </h2>
+              <p className="text-xs text-amber-800/80 dark:text-amber-300/80">
+                Tu pedido ya está en cola de cocina. Pagarás al momento de recibirlo.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-xl bg-white/80 dark:bg-slate-900/70 p-4 border border-amber-200/60 dark:border-amber-900/40 text-xs space-y-2">
+            <div className="flex justify-between">
+              <span className="text-slate-500 dark:text-slate-400">Total a pagar al repartidor:</span>
+              <span className="font-bold text-amber-800 dark:text-amber-300 text-sm">{formatearPrecio(pedido.total)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500 dark:text-slate-400">Medios recibidos por el domiciliario:</span>
+              <span className="font-medium text-slate-800 dark:text-slate-200">Efectivo o Datáfono inalámbrico</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-500 dark:text-slate-400">Dirección registrada:</span>
+              <span className="font-medium text-slate-800 dark:text-slate-200 text-right">{pedido.direccionEnvio}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Pedido Pagado */}
+      {esPagado && (
+        <div className="mb-6 flex items-center gap-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200/60 dark:border-emerald-800/40 px-5 py-4 text-emerald-800 dark:text-emerald-300 shadow-sm">
+          <Icon path={ICON_PATHS.check} className="h-6 w-6 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+          <div className="text-xs">
+            <p className="font-bold text-sm">¡Pago verificado y confirmado!</p>
+            <p className="text-emerald-700 dark:text-emerald-400">
+              Tu pago fue registrado exitosamente con {ETIQUETA_METODO_PAGO[pedido.metodoPago] || pedido.metodoPago}. Estamos preparando tus productos.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {reciénCreado && !puedePagarConTarjeta && !esTransferenciaPendiente && !esContraentregaPendiente && !esPagado && (
         <div className="mb-6 flex items-center gap-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 px-5 py-4 text-emerald-800 dark:text-emerald-300">
           <Icon path={ICON_PATHS.check} className="h-6 w-6 flex-shrink-0" />
           <div>

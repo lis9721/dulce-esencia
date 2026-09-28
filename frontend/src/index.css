@@ -160,6 +160,16 @@ h3 {
   @apply flex min-h-screen flex-col;
 }
 
+/* Paneles de usuario (pages/Panel.jsx): las tarjetas de las secciones
+   (rounded-2xl con borde) toman una elevación suave, como en el diseño
+   de referencia. Va en @layer components para que cualquier utilidad
+   shadow-* explícita (modales, etc.) siga teniendo prioridad. */
+@layer components {
+  .panel-area :is(section, article, div).rounded-2xl.border {
+    box-shadow: var(--shadow-suave);
+  }
+}
+
 /* ------------------------------------------------------------------ */
 /* Animaciones reutilizables: entrada al cargar (Hero), aparición al   */
 /* hacer scroll (Reveal.jsx) y unos "blobs" flotantes de fondo.        */

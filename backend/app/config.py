@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     # "sandbox" o "production". Ver docs/modulo-pagos-wompi.md para el
     # paso a paso de cómo pasar de uno a otro.
     PAYMENT_ENV: str = "sandbox"
+    WOMPI_SANDBOX_MOCK: bool = False
     WOMPI_PUBLIC_KEY: str = ""
     WOMPI_PRIVATE_KEY: str = ""
     # Secreto de eventos (para validar webhooks) y secreto de

@@ -1,23 +1,22 @@
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
+import logo from "../assets/images/logo1.webp";
 import { useAuth } from "../hooks/useAuth";
+import useDarkMode from "../hooks/useDarkMode";
 import { ROLES_PANEL } from "../constants/rolesPanel";
 import useDocumentTitle from "../hooks/useDocumentTitle";
+import Icon from "../components/ui/Icon";
+import ICON_PATHS from "../components/ui/iconPaths";
 
 /**
- * Nombre a mostrar en el saludo del panel. Usa `usuario.nombre` (viene
- * tanto en la respuesta de /login como en /usuarios/perfil), con el
- * correo como respaldo solo si ese campo faltara — mismo criterio que
- * ya usa `iniciales()` en components/UserMenu.jsx para el avatar del
- * navbar, para no tener dos formas distintas de mostrar la identidad
- * del usuario en la misma app.
+ * Nombre a mostrar en el saludo del panel.
  */
 function nombreParaSaludar(usuario) {
   return usuario?.nombre?.trim() || usuario?.correo?.split("@")[0] || "";
 }
 
 /**
- * Iniciales para el avatar de la tarjeta de usuario de la sidebar
- * (ej. "Laura Gómez" -> "LG"). Mismo criterio que UserMenu.jsx.
+ * Iniciales para el avatar de la tarjeta de usuario de la sidebar.
  */
 function inicialesUsuario(usuario) {
   const inicialNombre = usuario?.nombre?.trim()?.[0];
@@ -28,78 +27,66 @@ function inicialesUsuario(usuario) {
 }
 
 /**
- * Pestañas visibles según el rol del usuario autenticado. Se calculan a
- * partir de ROLES_PANEL (la misma fuente de verdad que usa App.jsx para
- * proteger /panel/productos y /panel/usuarios) en vez de mantener una
- * segunda lista de roles por pestaña: así es imposible que la UI muestre
- * una pestaña a la que la ruta después le niegue el acceso, o viceversa.
- *
- * "Mi perfil" y "Mis pedidos" van siempre primero, para cualquier rol;
- * el resto de pestañas (gestión) se agrega solo si el rol tiene permiso.
- * gruposSidebar() se apoya en ese mismo orden para separar ambos bloques.
+ * Saludo según la hora del día.
+ */
+function saludoSegunHora() {
+  const hora = new Date().getHours();
+  if (hora < 12) return "Buenos días";
+  if (hora < 18) return "Buenas tardes";
+  return "Buenas noches";
+}
+
+/**
+ * Pestañas visibles según el rol del usuario con su respectivo icono.
  */
 function pestañasParaRol(rol) {
-  const pestañas = [{ to: "/panel", end: true, label: "Mi perfil" }];
-  pestañas.push({ to: "/panel/mis-pedidos", label: "Mis pedidos" });
-  // Facturas y PQR: cualquier rol autenticado, igual que "Mis pedidos"
-  // (el backend filtra "solo lo mío" para un cliente).
-  pestañas.push({ to: "/panel/facturas", label: rol === "cliente" ? "Mis facturas" : "Facturas" });
-  pestañas.push({ to: "/panel/pqr", label: "PQR" });
+  const pestañas = [
+    { to: "/panel", end: true, label: "Mi perfil", icono: ICON_PATHS.user, desc: "Administra tus datos personales y la seguridad de tu cuenta." },
+    { to: "/panel/mis-pedidos", label: "Mis pedidos", icono: ICON_PATHS.bag, desc: "Consulta el estado y el historial de tus compras." },
+    { to: "/panel/facturas", label: rol === "cliente" ? "Mis facturas" : "Facturas", icono: ICON_PATHS.receipt, desc: "Revisa y descarga tus facturas y recibos." },
+    { to: "/panel/pqr", label: "PQR", icono: ICON_PATHS.chat, desc: "Peticiones, quejas y reclamos con su seguimiento." },
+  ];
+
   if (ROLES_PANEL.dashboard.includes(rol)) {
-    pestañas.push({ to: "/panel/dashboard", label: "Dashboard" });
+    pestañas.push({ to: "/panel/dashboard", label: "Dashboard", icono: ICON_PATHS.chart, desc: "Indicadores y métricas del negocio de un vistazo." });
   }
   if (ROLES_PANEL.ventas.includes(rol)) {
-    pestañas.push({ to: "/panel/ventas", label: "Ventas" });
+    pestañas.push({ to: "/panel/ventas", label: "Ventas", icono: ICON_PATHS.cart, desc: "Registra ventas en mostrador y revisa el reporte de caja." });
   }
   if (ROLES_PANEL.productos.includes(rol)) {
-    pestañas.push({ to: "/panel/productos", label: "Productos" });
+    pestañas.push({ to: "/panel/productos", label: "Productos", icono: ICON_PATHS.package, desc: "Gestiona el catálogo y el inventario de productos." });
   }
   if (ROLES_PANEL.servicios.includes(rol)) {
-    pestañas.push({ to: "/panel/servicios", label: "Servicios" });
+    pestañas.push({ to: "/panel/servicios", label: "Servicios", icono: ICON_PATHS.sparkle, desc: "Administra los talleres, eventos y servicios ofrecidos." });
   }
   if (ROLES_PANEL.proveedores.includes(rol)) {
-    pestañas.push({ to: "/panel/proveedores", label: "Proveedores" });
+    pestañas.push({ to: "/panel/proveedores", label: "Proveedores", icono: ICON_PATHS.truck, desc: "Proveedores de insumos y materias primas." });
   }
   if (ROLES_PANEL.usuarios.includes(rol)) {
-    pestañas.push({ to: "/panel/usuarios", label: "Usuarios" });
+    pestañas.push({ to: "/panel/usuarios", label: "Usuarios", icono: ICON_PATHS.users, desc: "Cuentas de usuario, roles y permisos de acceso." });
   }
   if (ROLES_PANEL.pedidos.includes(rol)) {
-    pestañas.push({ to: "/panel/pedidos", label: "Pedidos" });
+    pestañas.push({ to: "/panel/pedidos", label: "Pedidos", icono: ICON_PATHS.bag, desc: "Gestiona los pedidos y su estado de entrega." });
   }
   if (ROLES_PANEL.cupones.includes(rol)) {
-    pestañas.push({ to: "/panel/cupones", label: "Cupones" });
+    pestañas.push({ to: "/panel/cupones", label: "Cupones", icono: ICON_PATHS.tag, desc: "Crea y controla cupones y códigos de descuento." });
   }
+
   return pestañas;
 }
 
 /**
- * Agrupa las pestañas de la sidebar de escritorio en dos bloques con
- * rótulo — "Gestión" (todo lo operativo: productos, servicios, usuarios,
- * pedidos, cupones) y "Mi cuenta" (perfil, mis pedidos) — en vez de una
- * lista plana, para que se lea mejor a medida que crecen las opciones
- * (caso admin/empleado).
- *
- * El cliente no tiene pestañas de "Gestión" (ROLES_PANEL nunca incluye
- * "cliente"), así que para ese rol se devuelve un único grupo sin
- * rótulo: una sidebar con solo 2 opciones no necesita agruparse en
- * bloques, se vería sobredimensionada para lo poco que muestra.
+ * Agrupa las pestañas de la sidebar en bloques.
  */
 function gruposSidebar(rol) {
   const pestañas = pestañasParaRol(rol);
-  // Los primeros 4 ítems de pestañasParaRol() son siempre "Mi cuenta"
-  // (perfil, mis pedidos, facturas, PQR) para cualquier rol; el resto
-  // (dashboard, ventas, productos, ...) es "Gestión" y solo existe
-  // para admin/empleado.
   const cuenta = pestañas.slice(0, 4);
   const gestion = pestañas.slice(4);
 
-  if (gestion.length === 0) {
-    return [{ titulo: null, pestañas: cuenta }];
-  }
-  return [
-    { titulo: "Gestión", pestañas: gestion },
-    { titulo: "Mi cuenta", pestañas: cuenta },
-  ];
+  const grupos = [];
+  if (gestion.length > 0) grupos.push({ titulo: "Gestión", pestañas: gestion });
+  grupos.push({ titulo: "Mi cuenta", pestañas: cuenta });
+  return grupos;
 }
 
 const ETIQUETA_ROL = {
@@ -108,42 +95,136 @@ const ETIQUETA_ROL = {
   admin: "Administrador",
 };
 
-// Color del badge de rol en la tarjeta de usuario de la sidebar: ayuda a
-// identificar de un vistazo con qué tipo de cuenta se está trabajando,
-// sin agregar colores nuevos a la paleta ya definida en index.css.
 const BADGE_ROL = {
-  admin: "bg-accent/20 text-accent",
-  empleado: "bg-sage/30 text-primary",
-  cliente: "bg-blush/30 text-primary",
+  admin: "bg-accent/15 text-accent-dark dark:text-accent-soft",
+  empleado: "bg-exito text-exito-fuerte",
+  cliente: "bg-blush/50 text-ink",
 };
 
-/**
- * Subtítulo bajo el saludo. Para "cliente" se usa el lenguaje de una
- * tienda ("Mi cuenta") en vez de "Panel de Cliente", que suena más a
- * jerga interna de back-office — admin/empleado sí son back-office real,
- * así que mantienen "Panel de …".
- */
-function subtituloPanel(rol) {
-  if (rol === "cliente") return "Mi cuenta · Dulce Esencia Pastelería";
-  return `Panel de ${ETIQUETA_ROL[rol] || "usuario"} · Dulce Esencia Pastelería`;
-}
-
 function claseItemSidebar({ isActive }) {
-  return `rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-200 ${
-    isActive ? "bg-primary text-cream" : "text-primary/70 hover:bg-section hover:text-primary"
+  return `group relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+    isActive
+      ? "bg-accent/10 font-semibold text-accent-dark dark:text-accent-soft"
+      : "font-medium text-primary/70 hover:bg-section hover:text-primary"
   }`;
 }
 
+const CLASE_ENLACE_SITIO =
+  "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-primary/70 transition-colors hover:bg-section hover:text-primary";
+
+/**
+ * Contenido de la sidebar (logo, navegación por grupos, enlaces al
+ * sitio y tarjeta del usuario). Se usa dos veces: fija en escritorio
+ * y dentro del drawer en móvil, por eso vive como componente propio.
+ */
+function SidebarContenido({ grupos, usuario, onNavegar, onCerrarSesion }) {
+  return (
+    <div className="flex h-full flex-col">
+      <Link
+        to="/"
+        onClick={onNavegar}
+        className="flex h-16 shrink-0 items-center gap-3 border-b border-beige px-5"
+        aria-label="Dulce Esencia Pastelería, ir al inicio"
+      >
+        <img src={logo} alt="" width={36} height={40} className="h-10 w-auto" />
+        <span className="leading-tight">
+          <span className="block font-display text-base font-bold text-primary">Dulce Esencia</span>
+          <span className="block text-xs text-primary/55">Panel de control</span>
+        </span>
+      </Link>
+
+      <div className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
+        {grupos.map((grupo) => (
+          <div key={grupo.titulo}>
+            <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/45">
+              {grupo.titulo}
+            </p>
+            <nav className="flex flex-col gap-0.5" aria-label={grupo.titulo}>
+              {grupo.pestañas.map((pestaña) => (
+                <NavLink
+                  key={pestaña.to}
+                  to={pestaña.to}
+                  end={pestaña.end}
+                  onClick={onNavegar}
+                  className={claseItemSidebar}
+                >
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <span
+                          aria-hidden="true"
+                          className="absolute -left-3 top-1.5 bottom-1.5 w-[3px] rounded-r-full bg-accent"
+                        />
+                      )}
+                      <Icon path={pestaña.icono} className="h-[18px] w-[18px] shrink-0" />
+                      <span className="flex-1 truncate">{pestaña.label}</span>
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+        ))}
+
+        <div>
+          <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary/45">
+            Sitio
+          </p>
+          <nav className="flex flex-col gap-0.5" aria-label="Sitio">
+            <Link to="/tienda" onClick={onNavegar} className={CLASE_ENLACE_SITIO}>
+              <Icon path={ICON_PATHS.cart} className="h-[18px] w-[18px] shrink-0" />
+              <span>Ir a la tienda</span>
+            </Link>
+            <Link to="/" onClick={onNavegar} className={CLASE_ENLACE_SITIO}>
+              <Icon path={ICON_PATHS.home} className="h-[18px] w-[18px] shrink-0" />
+              <span>Volver al inicio</span>
+            </Link>
+          </nav>
+        </div>
+      </div>
+
+      {/* Tarjeta del usuario al pie, como en la referencia */}
+      <div className="flex shrink-0 items-center gap-3 border-t border-beige p-4">
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-soft text-xs font-bold text-paper">
+          {inicialesUsuario(usuario)}
+        </span>
+        <div className="min-w-0 flex-1 leading-tight">
+          <p className="truncate text-sm font-semibold text-primary">{nombreParaSaludar(usuario)}</p>
+          <p className="truncate text-xs text-primary/55">{ETIQUETA_ROL[usuario.rol] || "Usuario"}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onCerrarSesion}
+          aria-label="Cerrar sesión"
+          title="Cerrar sesión"
+          className="rounded-lg p-2 text-primary/60 transition-colors hover:bg-peligro hover:text-peligro-fuerte"
+        >
+          <Icon path={ICON_PATHS.logout} className="h-[18px] w-[18px]" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function Panel() {
-  useDocumentTitle("Mi panel", "Panel privado de gestión de Dulce Esencia Pastelería.", "/panel", true);
+  useDocumentTitle("Panel de Control", "Panel privado de gestión de Dulce Esencia Pastelería.", "/panel", true);
 
   const { usuario, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [oscuro, alternarTema] = useDarkMode();
+  const [menuAbierto, setMenuAbierto] = useState(false);
 
-  // Defensa extra: si por lo que sea Panel se renderizara sin un usuario
-  // cargado (por ejemplo, un cambio futuro que reordene los guards),
-  // no explota con "Cannot read properties of null" — el ErrorBoundary
-  // ya cubre errores inesperados, pero esto evita uno totalmente evitable.
+  // Escape cierra el drawer móvil.
+  useEffect(() => {
+    if (!menuAbierto) return undefined;
+    const alTeclear = (evento) => {
+      if (evento.key === "Escape") setMenuAbierto(false);
+    };
+    window.addEventListener("keydown", alTeclear);
+    return () => window.removeEventListener("keydown", alTeclear);
+  }, [menuAbierto]);
+
   if (!usuario) return null;
 
   const pestañas = pestañasParaRol(usuario.rol);
@@ -154,104 +235,131 @@ function Panel() {
     navigate("/");
   };
 
+  const seccionActual =
+    pestañas.find((p) => (p.end ? location.pathname === p.to : location.pathname.startsWith(p.to))) || pestañas[0];
+  const esInicio = seccionActual?.to === "/panel";
+
+  const fecha = new Date().toLocaleDateString("es-CO", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
   return (
-    <main className="flex-1 bg-section px-4 py-10 sm:px-6">
-      <div className="mx-auto max-w-6xl md:grid md:grid-cols-[15rem_1fr] md:items-start md:gap-8">
-        {/* Sidebar — solo escritorio. "sticky top-20" asume el header
-            fijo (Header.jsx) de ~5rem de alto; ajustar ese valor si
-            cambia la altura real del header. */}
-        <aside className="sticky top-20 hidden h-fit flex-col gap-4 rounded-xl border border-beige/70 bg-cream p-4 md:flex">
-          <div className="flex items-center gap-3 border-b border-beige/60 pb-4">
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-sm font-bold text-cream">
+    <div className="min-h-screen bg-section lg:grid lg:grid-cols-[16.5rem_minmax(0,1fr)]">
+      {/* SIDEBAR DE ESCRITORIO */}
+      <aside className="sticky top-0 hidden h-screen border-r border-beige bg-cream lg:block">
+        <SidebarContenido
+          grupos={grupos}
+          usuario={usuario}
+          onNavegar={undefined}
+          onCerrarSesion={cerrarSesion}
+        />
+      </aside>
+
+      {/* DRAWER MÓVIL */}
+      {menuAbierto && (
+        <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Menú del panel">
+          <button
+            type="button"
+            aria-label="Cerrar menú"
+            onClick={() => setMenuAbierto(false)}
+            className="absolute inset-0 bg-primary-dark/50"
+          />
+          <aside className="relative h-full w-72 max-w-[85%] border-r border-beige bg-cream shadow-elevada">
+            <SidebarContenido
+              grupos={grupos}
+              usuario={usuario}
+              onNavegar={() => setMenuAbierto(false)}
+              onCerrarSesion={cerrarSesion}
+            />
+          </aside>
+        </div>
+      )}
+
+      <div className="flex min-w-0 flex-col">
+        {/* BARRA SUPERIOR */}
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-beige bg-cream/90 px-4 backdrop-blur sm:px-8">
+          <button
+            type="button"
+            onClick={() => setMenuAbierto(true)}
+            aria-label="Abrir menú del panel"
+            aria-expanded={menuAbierto}
+            className="-ml-2 rounded-lg p-2 text-primary lg:hidden"
+          >
+            <Icon path={ICON_PATHS.menu} className="h-6 w-6" />
+          </button>
+
+          <nav aria-label="Ruta actual" className="flex min-w-0 items-center gap-2 text-sm">
+            <Link to="/panel" className="text-primary/55 transition-colors hover:text-primary">
+              Panel
+            </Link>
+            <Icon path={ICON_PATHS.chevronRight} className="h-3 w-3 shrink-0 text-primary/40" />
+            <span className="truncate font-semibold text-primary" aria-current="page">
+              {seccionActual?.label}
+            </span>
+          </nav>
+
+          <div className="ml-auto flex items-center gap-1.5">
+            <Link
+              to="/tienda"
+              className="hidden items-center gap-2 rounded-lg border border-beige bg-cream px-3 py-1.5 text-sm font-medium text-primary/80 transition-colors hover:bg-section hover:text-primary sm:inline-flex"
+            >
+              <Icon path={ICON_PATHS.cart} className="h-4 w-4" />
+              <span>Ir a la tienda</span>
+            </Link>
+            <button
+              type="button"
+              onClick={alternarTema}
+              aria-label={oscuro ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+              className="rounded-lg p-2 text-primary/70 transition-colors hover:bg-section hover:text-primary"
+            >
+              <Icon path={oscuro ? ICON_PATHS.sun : ICON_PATHS.moon} className="h-5 w-5" />
+            </button>
+            <span
+              title={usuario.correo}
+              className="ml-1 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent to-accent-soft text-xs font-bold text-paper"
+            >
               {inicialesUsuario(usuario)}
             </span>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-primary">
-                {nombreParaSaludar(usuario)}
-              </p>
+          </div>
+        </header>
+
+        {/* CONTENIDO */}
+        <div className="panel-area flex-1 px-4 py-8 sm:px-8">
+          <div className="mx-auto max-w-6xl">
+            <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-medium tracking-wide text-primary/55 first-letter:uppercase">{fecha}</p>
+                <h1 className="mt-1.5 font-display text-3xl font-bold tracking-tight text-primary sm:text-4xl">
+                  {esInicio ? (
+                    <>
+                      {saludoSegunHora()},{" "}
+                      <span className="text-accent dark:text-accent-soft">{nombreParaSaludar(usuario)}</span>
+                    </>
+                  ) : (
+                    seccionActual?.label
+                  )}
+                </h1>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-primary/70">{seccionActual?.desc}</p>
+              </div>
               <span
-                className={`mt-0.5 inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                className={`self-start rounded-full px-3 py-1 text-xs font-semibold sm:self-auto ${
                   BADGE_ROL[usuario.rol] || "bg-beige/40 text-primary"
                 }`}
               >
                 {ETIQUETA_ROL[usuario.rol] || "Usuario"}
               </span>
             </div>
+
+            <div className="min-w-0">
+              <Outlet />
+            </div>
           </div>
-
-          {grupos.map((grupo, indice) => (
-            <nav
-              key={grupo.titulo || indice}
-              className="flex flex-col gap-1"
-              aria-label={grupo.titulo || "Secciones del panel"}
-            >
-              {grupo.titulo && (
-                <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-primary/40">
-                  {grupo.titulo}
-                </p>
-              )}
-              {grupo.pestañas.map((pestaña) => (
-                <NavLink key={pestaña.to} to={pestaña.to} end={pestaña.end} className={claseItemSidebar}>
-                  {pestaña.label}
-                </NavLink>
-              ))}
-            </nav>
-          ))}
-
-          <div className="mt-1 flex flex-col gap-1 border-t border-beige/60 pt-3">
-            {/* Acceso rápido propio del cliente: entra al panel a revisar
-                su cuenta, pero seguramente quiere volver a comprar. */}
-            {usuario.rol === "cliente" && (
-              <NavLink
-                to="/tienda"
-                className="rounded-lg px-3 py-2 text-sm font-medium text-primary/70 hover:bg-blush/20 hover:text-primary"
-              >
-                Volver a la tienda
-              </NavLink>
-            )}
-            <button
-              type="button"
-              onClick={cerrarSesion}
-              className="rounded-lg px-3 py-2 text-left text-sm font-medium text-peligro-fuerte hover:bg-peligro dark:text-peligro-fuerte dark:hover:bg-peligro"
-            >
-              Cerrar sesión
-            </button>
-          </div>
-        </aside>
-
-        {/* Contenido */}
-        <div className="min-w-0">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold text-primary">Hola, {nombreParaSaludar(usuario)}</h1>
-            <p className="text-sm text-primary/70">{subtituloPanel(usuario.rol)}</p>
-          </div>
-
-          {/* Fila de pestañas horizontal — solo móvil/tablet, donde una
-              sidebar no cabe bien. En escritorio la reemplaza la
-              sidebar de la izquierda con las mismas pestañas. */}
-          <nav className="mb-6 flex flex-wrap gap-2 md:hidden" aria-label="Secciones del panel">
-            {pestañas.map((pestaña) => (
-              <NavLink
-                key={pestaña.to}
-                to={pestaña.to}
-                end={pestaña.end}
-                className={({ isActive }) =>
-                  `rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 hover:scale-105 ${
-                    isActive
-                      ? "bg-primary text-cream shadow-sm"
-                      : "bg-cream text-primary/70 hover:text-primary hover:shadow-sm"
-                  }`
-                }
-              >
-                {pestaña.label}
-              </NavLink>
-            ))}
-          </nav>
-
-          <Outlet />
         </div>
       </div>
-    </main>
+    </div>
   );
 }
 

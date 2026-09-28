@@ -103,6 +103,15 @@ function ResetPassword() {
           </p>
         ) : (
           <>
+            {parametros.get("enviado") === "1" && (
+              <div className="mb-4 flex items-center gap-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 p-3 text-sm text-emerald-800 dark:text-emerald-300">
+                <span>📨</span>
+                <span>
+                  Te enviamos un código de 6 dígitos a tu correo. Ingrésalo a continuación junto con tu nueva contraseña.
+                </span>
+              </div>
+            )}
+
             <p className="mb-6 text-sm text-primary/70">
               Escribe el código de 6 dígitos que te enviamos por correo
               (vigente por 10 minutos) junto con tu nueva contraseña.

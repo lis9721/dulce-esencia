@@ -107,3 +107,41 @@ const TIPOS_PQR = {
 export function obtenerTipoPQR(tipo) {
   return TIPOS_PQR[tipo] || tipo;
 }
+
+/** Configuración visual y etiquetas de los métodos de pago. */
+export const METODOS_PAGO = {
+  tarjeta: {
+    nombre: "Tarjeta (Wompi)",
+    icono: "💳",
+    descripcion: "Tarjeta crédito / débito (Pasarela Wompi)",
+    badge: "Wompi Bancolombia",
+    badgeClase: "bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 border-purple-200 dark:border-purple-800",
+  },
+  transferencia: {
+    nombre: "Transferencia",
+    icono: "🏦",
+    descripcion: "Bancolombia, Nequi, Daviplata o PSE",
+    badge: "Bancolombia / Nequi",
+    badgeClase: "bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800",
+  },
+  contraentrega: {
+    nombre: "Contraentrega",
+    icono: "💵",
+    descripcion: "Efectivo o datáfono al recibir",
+    badge: "Pago al recibir",
+    badgeClase: "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+  },
+};
+
+export function obtenerMetodoPago(metodo) {
+  return (
+    METODOS_PAGO[metodo] || {
+      nombre: metodo || "No especificado",
+      icono: "🪙",
+      descripcion: "",
+      badge: metodo || "Otro",
+      badgeClase: "bg-slate-100 text-slate-800",
+    }
+  );
+}
+

@@ -1,6 +1,8 @@
 import { useRef } from "react";
 import { Link } from "react-router-dom";
-import heroImagen from "../assets/images/img2.jpg";
+import { resolverUrlImagen } from "../utils/formato";
+
+const heroImagen = resolverUrlImagen("/uploads/productos/e183cb186c224d0b9baab1f5965352cd.jpg");
 
 /**
  * Hero de la página de inicio.

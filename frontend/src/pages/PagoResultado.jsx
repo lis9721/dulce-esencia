@@ -4,6 +4,7 @@ import Icon from "../components/ui/Icon";
 import ICON_PATHS from "../components/ui/iconPaths";
 import useDocumentTitle from "../hooks/useDocumentTitle";
 import { obtenerPagoPorReferencia, sincronizarPago } from "../utils/api";
+import { formatearPrecio } from "../utils/formato";
 
 const INTERVALO_MS = 4000;
 const MAX_INTENTOS = 8; // ~32 s esperando el webhook / la confirmación de Wompi
@@ -73,10 +74,41 @@ function PagoResultado() {
       )}
 
       {aprobado && (
-        <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 px-6 py-8 text-emerald-800 dark:text-emerald-300">
-          <Icon path={ICON_PATHS.check} className="mx-auto h-10 w-10" />
-          <h1 className="mt-3 text-2xl font-bold">¡Pago aprobado!</h1>
-          <p className="mt-1 text-sm">Referencia {pago.referencia}. Ya empezamos a preparar tu pedido.</p>
+        <div className="rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 p-6 text-emerald-900 dark:text-emerald-200 border border-emerald-200/60 dark:border-emerald-800/40 shadow-sm">
+          <Icon path={ICON_PATHS.check} className="mx-auto h-12 w-12 text-emerald-600 dark:text-emerald-400" />
+          <h1 className="mt-3 text-2xl font-bold">¡Pago aprobado con éxito!</h1>
+          <p className="mt-1 text-sm text-emerald-800 dark:text-emerald-300">
+            Transacción procesada correctamente por la pasarela Wompi. Ya empezamos a preparar tu pedido.
+          </p>
+
+          <div className="mt-6 rounded-xl bg-white/80 dark:bg-slate-900/60 p-4 text-left text-xs space-y-2 border border-emerald-200/50 dark:border-emerald-900/50">
+            <div className="flex justify-between">
+              <span className="text-slate-500 dark:text-slate-400">Referencia:</span>
+              <span className="font-mono font-semibold text-slate-800 dark:text-slate-200">{pago.referencia}</span>
+            </div>
+            {(pago.idTransaccionProveedor || idTransaccion) && (
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">ID Wompi:</span>
+                <span className="font-mono text-slate-700 dark:text-slate-300">{pago.idTransaccionProveedor || idTransaccion}</span>
+              </div>
+            )}
+            <div className="flex justify-between">
+              <span className="text-slate-500 dark:text-slate-400">Pasarela:</span>
+              <span className="font-semibold text-emerald-700 dark:text-emerald-400">Wompi Colombia (Bancolombia)</span>
+            </div>
+            {pago.metodoPago && (
+              <div className="flex justify-between">
+                <span className="text-slate-500 dark:text-slate-400">Método:</span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">{pago.metodoPago}</span>
+              </div>
+            )}
+            {pago.monto && (
+              <div className="flex justify-between border-t border-emerald-200/40 dark:border-slate-800 pt-2 font-bold text-sm text-slate-900 dark:text-white">
+                <span>Total pagado:</span>
+                <span className="text-emerald-600 dark:text-emerald-400">{formatearPrecio(pago.monto)}</span>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

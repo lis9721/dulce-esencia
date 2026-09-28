@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import StatCard from "../../components/ui/StatCard";
+import ICON_PATHS from "../../components/ui/iconPaths";
 import BarChart from "../../components/charts/BarChart";
 import LineChart from "../../components/charts/LineChart";
 import { obtenerEstadisticasAdmin, obtenerEstadisticasVentas } from "../../utils/api";
@@ -87,13 +88,13 @@ function Dashboard() {
           ) : (
             cardsAdmin && (
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                <StatCard etiqueta="Usuarios" valor={cardsAdmin.totalUsuarios} />
-                <StatCard etiqueta="Productos activos" valor={cardsAdmin.totalProductos} acento="sage" />
-                <StatCard etiqueta="Servicios activos" valor={cardsAdmin.totalServicios} acento="sage" />
-                <StatCard etiqueta="Ventas completadas" valor={cardsAdmin.totalVentas} acento="accent" />
-                <StatCard etiqueta="Total facturado" valor={formatearPrecio(cardsAdmin.totalFacturado)} acento="accent" />
-                <StatCard etiqueta="PQR pendientes" valor={cardsAdmin.pqrPendientes} acento="blush" />
-                <StatCard etiqueta="PQR recibidas" valor={cardsAdmin.pqrRecibidas} acento="blush" />
+                <StatCard icono={ICON_PATHS.users} etiqueta="Usuarios" valor={cardsAdmin.totalUsuarios} />
+                <StatCard icono={ICON_PATHS.package} etiqueta="Productos activos" valor={cardsAdmin.totalProductos} acento="sage" />
+                <StatCard icono={ICON_PATHS.sparkle} etiqueta="Servicios activos" valor={cardsAdmin.totalServicios} acento="sage" />
+                <StatCard icono={ICON_PATHS.cart} etiqueta="Ventas completadas" valor={cardsAdmin.totalVentas} acento="accent" />
+                <StatCard icono={ICON_PATHS.receipt} etiqueta="Total facturado" valor={formatearPrecio(cardsAdmin.totalFacturado)} acento="accent" />
+                <StatCard icono={ICON_PATHS.chat} etiqueta="PQR pendientes" valor={cardsAdmin.pqrPendientes} acento="blush" />
+                <StatCard icono={ICON_PATHS.chat} etiqueta="PQR recibidas" valor={cardsAdmin.pqrRecibidas} acento="blush" />
               </div>
             )
           )}

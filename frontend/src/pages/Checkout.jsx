@@ -15,8 +15,8 @@ import { crearPedido } from "../utils/api";
 import { iniciarPagoConWompi } from "../utils/pagos";
 
 const OPCIONES_METODO_PAGO = [
-  { value: "tarjeta", label: "Tarjeta" },
-  { value: "transferencia", label: "Transferencia" },
+  { value: "tarjeta", label: "Tarjeta de crédito / débito (Pasarela Wompi)" },
+  { value: "transferencia", label: "Transferencia bancaria" },
   { value: "contraentrega", label: "Pago contraentrega" },
 ];
 
@@ -45,7 +45,7 @@ function Checkout() {
     {
       direccionEnvio: usuario?.direccion || "",
       telefonoContacto: usuario?.telefono || "",
-      metodoPago: "",
+      metodoPago: "tarjeta",
     },
     validadores
   );
@@ -168,17 +168,174 @@ function Checkout() {
             error={errors.telefonoContacto}
             touched={touched.telefonoContacto}
           />
-          <Select
-            label="Método de pago"
-            name="metodoPago"
-            required
-            value={values.metodoPago}
-            onChange={handleChange}
-            onBlur={handleBlur}
-            error={errors.metodoPago}
-            touched={touched.metodoPago}
-            options={OPCIONES_METODO_PAGO}
-          />
+          <fieldset className="flex flex-col gap-3">
+            <legend className="text-sm font-semibold text-primary mb-2 flex items-center justify-between">
+              <span>Método de pago <span className="text-peligro-fuerte">*</span></span>
+              {errors.metodoPago && touched.metodoPago && (
+                <span className="text-xs text-peligro-fuerte font-normal">{errors.metodoPago}</span>
+              )}
+            </legend>
+
+            {/* Opción 1: Tarjeta Wompi */}
+            <label
+              className={`relative flex flex-col rounded-2xl border p-4 cursor-pointer transition-all ${
+                values.metodoPago === "tarjeta"
+                  ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
+                  : "border-beige/80 bg-cream/40 hover:bg-cream hover:border-primary/40"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="metodoPago"
+                    value="tarjeta"
+                    checked={values.metodoPago === "tarjeta"}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className="h-4 w-4 text-primary focus:ring-primary border-slate-300"
+                  />
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-primary text-sm sm:text-base">
+                        Tarjeta de crédito / débito (Wompi)
+                      </span>
+                      <span className="rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                        Recomendado
+                      </span>
+                    </div>
+                    <p className="text-xs text-primary/70 mt-0.5">
+                      Aprobación instantánea. Visa, Mastercard, American Express o Crédito Fácil Codensa.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 opacity-90">
+                  <span className="rounded bg-white dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-black border border-slate-200 dark:border-slate-700 text-blue-800 dark:text-blue-300">VISA</span>
+                  <span className="rounded bg-white dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-black border border-slate-200 dark:border-slate-700 text-amber-600 dark:text-amber-400">MC</span>
+                  <span className="rounded bg-[#00172e] px-1.5 py-0.5 text-[10px] font-bold text-[#00d09c]">wompi</span>
+                </div>
+              </div>
+
+              {values.metodoPago === "tarjeta" && (
+                <div className="mt-3 pt-3 border-t border-primary/10 text-xs text-primary/80 space-y-1">
+                  <p className="flex items-center gap-1.5 text-blue-700 dark:text-blue-300 font-medium">
+                    <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Transacción protegida por Wompi Bancolombia (Sandbox de pruebas)
+                  </p>
+                  <p className="text-primary/70 pl-3.5">
+                    Al confirmar serás dirigido al Web Checkout de Wompi para realizar el pago de forma segura. Tus datos nunca viajan por nuestros servidores.
+                  </p>
+                </div>
+              )}
+            </label>
+
+            {/* Opción 2: Transferencia bancaria */}
+            <label
+              className={`relative flex flex-col rounded-2xl border p-4 cursor-pointer transition-all ${
+                values.metodoPago === "transferencia"
+                  ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
+                  : "border-beige/80 bg-cream/40 hover:bg-cream hover:border-primary/40"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="metodoPago"
+                    value="transferencia"
+                    checked={values.metodoPago === "transferencia"}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className="h-4 w-4 text-primary focus:ring-primary border-slate-300"
+                  />
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-primary text-sm sm:text-base">
+                        Transferencia bancaria / Nequi / Daviplata
+                      </span>
+                      <span className="rounded-full bg-blue-100 dark:bg-blue-950/60 px-2 py-0.5 text-[10px] font-bold text-blue-800 dark:text-blue-300 border border-blue-300 dark:border-blue-800">
+                        Cero comisiones
+                      </span>
+                    </div>
+                    <p className="text-xs text-primary/70 mt-0.5">
+                      Transfiere desde tu app bancaria favorita a Bancolombia, Nequi o Daviplata.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 opacity-90">
+                  <span className="rounded bg-purple-100 dark:bg-purple-950/50 px-1.5 py-0.5 text-[10px] font-bold text-purple-700 dark:text-purple-300 border border-purple-300">Nequi</span>
+                  <span className="rounded bg-amber-100 dark:bg-amber-950/50 px-1.5 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300 border border-amber-300">Bancolombia</span>
+                </div>
+              </div>
+
+              {values.metodoPago === "transferencia" && (
+                <div className="mt-3 pt-3 border-t border-primary/10 text-xs text-primary/80 space-y-1.5">
+                  <p className="font-medium text-primary">Cuentas disponibles para transferir tras confirmar:</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                    <div className="rounded-lg bg-white/70 dark:bg-slate-900/60 p-2 border border-beige/60">
+                      <span className="font-semibold block text-primary">Bancolombia Ahorros</span>
+                      <span className="font-mono text-primary/80"># 102-938475-12</span>
+                    </div>
+                    <div className="rounded-lg bg-white/70 dark:bg-slate-900/60 p-2 border border-beige/60">
+                      <span className="font-semibold block text-primary">Nequi / Daviplata</span>
+                      <span className="font-mono text-primary/80">300 111 2233</span>
+                    </div>
+                  </div>
+                  <p className="text-primary/70 text-[11px] pt-1">
+                    Al confirmar, podrás enviar el comprobante directamente por WhatsApp con un solo clic.
+                  </p>
+                </div>
+              )}
+            </label>
+
+            {/* Opción 3: Contraentrega */}
+            <label
+              className={`relative flex flex-col rounded-2xl border p-4 cursor-pointer transition-all ${
+                values.metodoPago === "contraentrega"
+                  ? "border-primary bg-primary/5 ring-1 ring-primary shadow-sm"
+                  : "border-beige/80 bg-cream/40 hover:bg-cream hover:border-primary/40"
+              }`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="radio"
+                    name="metodoPago"
+                    value="contraentrega"
+                    checked={values.metodoPago === "contraentrega"}
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    className="h-4 w-4 text-primary focus:ring-primary border-slate-300"
+                  />
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-primary text-sm sm:text-base">
+                        Pago contraentrega (Efectivo o Datáfono)
+                      </span>
+                      <span className="rounded-full bg-amber-100 dark:bg-amber-950/60 px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+                        Paga al recibir
+                      </span>
+                    </div>
+                    <p className="text-xs text-primary/70 mt-0.5">
+                      Paga cuando recibas tus productos frescos en tu puerta o al recoger en tienda.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 opacity-90">
+                  <span className="rounded bg-emerald-100 dark:bg-emerald-950/50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300">Efectivo</span>
+                  <span className="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-300 border border-slate-300">Datáfono</span>
+                </div>
+              </div>
+
+              {values.metodoPago === "contraentrega" && (
+                <div className="mt-3 pt-3 border-t border-primary/10 text-xs text-primary/80 space-y-1">
+                  <p className="text-primary/70">
+                    El repartidor llevará datáfono inalámbrico para tarjeta débito/crédito, o puedes pagar en efectivo. Recuerda tener disponible el cambio aproximado.
+                  </p>
+                </div>
+              )}
+            </label>
+          </fieldset>
 
           {hayProductosBloqueados && (
             <p className="rounded-lg bg-peligro px-3 py-2 text-sm text-peligro-fuerte">

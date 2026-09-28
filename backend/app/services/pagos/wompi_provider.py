@@ -43,6 +43,13 @@ class WompiProvider(PaymentProvider):
     def __init__(self, settings):
         self._settings = settings
 
+    def _modo_demo(self) -> bool:
+        if getattr(self._settings, "WOMPI_SANDBOX_MOCK", False):
+            return True
+        pub = getattr(self._settings, "WOMPI_PUBLIC_KEY", "") or ""
+        sec = getattr(self._settings, "WOMPI_INTEGRITY_SECRET", "") or ""
+        return pub in ("pub_test_xxxxx", "demo") or sec == "xxxxx"
+
     def _validar_credenciales(self, *campos: str) -> None:
         faltantes = [c for c in campos if not getattr(self._settings, c, "")]
         if faltantes:
@@ -70,6 +77,24 @@ class WompiProvider(PaymentProvider):
         nombre_cliente: str | None,
         url_redireccion: str | None,
     ) -> DatosPagoProveedor:
+        if self._modo_demo():
+            id_transaccion_demo = f"demo_trx_{referencia}_{monto_centavos}"
+            from urllib.parse import quote
+            url_retorno_encoded = quote(url_redireccion or "/pago/resultado", safe="")
+            checkout_url = (
+                f"/pago/simulador?referencia={referencia}&id={id_transaccion_demo}&monto={monto_centavos}&url_retorno={url_retorno_encoded}"
+            )
+            return DatosPagoProveedor(
+                id_transaccion_proveedor=None,
+                estado=EstadoPago.PENDING,
+                url_checkout=checkout_url,
+                respuesta_cruda={
+                    "checkout_url": checkout_url,
+                    "reference": referencia,
+                    "modo": "demo_sandbox",
+                },
+            )
+
         self._validar_credenciales("WOMPI_PUBLIC_KEY", "WOMPI_INTEGRITY_SECRET")
 
         fecha_expiracion = self._calcular_fecha_expiracion()
@@ -125,6 +150,31 @@ class WompiProvider(PaymentProvider):
         return vencimiento.strftime("%Y-%m-%dT%H:%M:%S.") + f"{vencimiento.microsecond // 1000:03d}Z"
 
     def get_payment(self, id_transaccion_proveedor: str) -> DatosPagoProveedor:
+        if (
+            id_transaccion_proveedor.startswith("demo_trx_")
+            or id_transaccion_proveedor.startswith("demo_declined_")
+            or self._modo_demo()
+        ):
+            partes = id_transaccion_proveedor.split("_")
+            referencia = partes[2] if len(partes) >= 3 else "demo"
+            monto_centavos = int(partes[3]) if len(partes) >= 4 and partes[3].isdigit() else 0
+            es_rechazado = "declined" in id_transaccion_proveedor.lower()
+            estado = EstadoPago.DECLINED if es_rechazado else EstadoPago.APPROVED
+            return DatosPagoProveedor(
+                id_transaccion_proveedor=id_transaccion_proveedor,
+                estado=estado,
+                metodo_pago="CARD_DEMO",
+                respuesta_cruda={
+                    "data": {
+                        "id": id_transaccion_proveedor,
+                        "status": estado.value,
+                        "reference": referencia,
+                        "amount_in_cents": monto_centavos,
+                        "payment_method_type": "CARD",
+                    }
+                },
+            )
+
         self._validar_credenciales("WOMPI_PUBLIC_KEY")
         respuesta = self._cliente().obtener_transaccion(id_transaccion_proveedor)
         transaccion = respuesta.get("data", {})
