@@ -40,6 +40,12 @@ CABECERAS_SEGURIDAD = {
 # excluyen de esa cabecera puntual (las demás sí aplican).
 RUTAS_DOCUMENTACION = ("/docs", "/redoc", "/openapi.json")
 
+# Archivos públicos (fotos de productos): el frontend vive en otro dominio
+# (p. ej. vercel.app) que el backend (p. ej. onrender.com), así que con
+# `same-site` el navegador bloquearía las imágenes. Solo para estas rutas
+# se permite `cross-origin`; el resto de la API conserva `same-site`.
+RUTAS_ARCHIVOS_PUBLICOS = ("/uploads",)
+
 
 class CabecerasSeguridadMiddleware(BaseHTTPMiddleware):
     """Agrega las cabeceras de seguridad a TODAS las respuestas."""
@@ -56,6 +62,9 @@ class CabecerasSeguridadMiddleware(BaseHTTPMiddleware):
             if es_documentacion and nombre in {"Content-Security-Policy", "Cross-Origin-Resource-Policy"}:
                 continue
             respuesta.headers.setdefault(nombre, valor)
+
+        if request.url.path.startswith(RUTAS_ARCHIVOS_PUBLICOS):
+            respuesta.headers["Cross-Origin-Resource-Policy"] = "cross-origin"
 
         if self.solo_https:
             respuesta.headers.setdefault(
