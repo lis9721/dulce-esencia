@@ -88,7 +88,7 @@ function CrearUsuarioModal({ onCreado }) {
     try {
       // confirmarPassword solo existe para la validación en el frontend;
       // el backend no la espera (ver POST /api/usuarios).
-      const { confirmarPassword, ...datos } = values;
+      const { confirmarPassword: _confirmarPassword, ...datos } = values;
       await crearUsuario(datos);
       resetForm();
       onCreado?.();

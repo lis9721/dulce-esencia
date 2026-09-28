@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Input from "./ui/Input";
 import Button from "./ui/Button";
-import Icon from "./ui/Icon";
-import ICON_PATHS from "./ui/iconPaths";
 import { validarCorreo } from "../utils/validators";
 import { recuperarPassword } from "../utils/api";
 
@@ -15,7 +13,6 @@ function RecoverPassword({ onVolver }) {
   const [correo, setCorreo] = useState("");
   const [error, setError] = useState("");
   const [tocado, setTocado] = useState(false);
-  const [enviado, setEnviado] = useState(false);
   const [enviando, setEnviando] = useState(false);
   const [errorServidor, setErrorServidor] = useState("");
   const navigate = useNavigate();
@@ -51,31 +48,6 @@ function RecoverPassword({ onVolver }) {
       setEnviando(false);
     }
   };
-
-  if (enviado) {
-    return (
-      <div className="flex flex-col items-center gap-4 py-2 text-center">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <Icon path={ICON_PATHS.check} className="h-6 w-6" />
-        </div>
-        <p className="text-sm text-primary/70">
-          Si <span className="font-medium text-primary">{correo}</span> está
-          registrado, te enviamos un código de 6 dígitos para restablecer tu
-          contraseña.
-        </p>
-        <Button onClick={handleContinuar} fullWidth>
-          Ya tengo el código
-        </Button>
-        <button
-          type="button"
-          onClick={onVolver}
-          className="text-sm font-medium text-primary hover:underline"
-        >
-          ← Volver al inicio de sesión
-        </button>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">

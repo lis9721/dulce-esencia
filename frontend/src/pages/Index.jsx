@@ -107,12 +107,16 @@ function Index() {
       .then((respuesta) => {
         if (!vigente) return;
         const reales = respuesta.datos || [];
-        setCatalogo(
-          carouselData.map((item) => {
-            const real = reales.find((p) => p.titulo === item.titulo) || reales.find((p) => p.id === item.id);
-            return real?.imagen ? { ...item, imagen: resolverUrlImagen(real.imagen) } : item;
-          })
-        );
+        if (reales.length >= 3) {
+          setCatalogo(
+            reales.map((p) => ({ ...p, imagen: resolverUrlImagen(p.imagen) }))
+          );
+        } else if (reales.length > 0) {
+          // Si hay menos de 3, completamos con el carouselData para no romper el layout del Bento
+          const combinados = reales.map((p) => ({ ...p, imagen: resolverUrlImagen(p.imagen) }));
+          const faltantes = 3 - reales.length;
+          setCatalogo([...combinados, ...carouselData.slice(0, faltantes)]);
+        }
       })
       .catch(() => {});
     return () => {
@@ -219,8 +223,8 @@ function Index() {
               <div className="group relative col-span-2 overflow-hidden rounded-2xl border border-beige/70 bg-cream shadow-sm transition-all duration-300 hover:shadow-md">
                 <div className="relative h-56 w-full overflow-hidden sm:h-64">
                   <img
-                    src={catalogo[1].imagen}
-                    alt="Torta de Fresas y Crema de Dulce Esencia"
+                    src={catalogo[0]?.imagen}
+                    alt={catalogo[0]?.titulo}
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/10" />
@@ -232,16 +236,16 @@ function Index() {
                   <div className="absolute right-3 bottom-3 left-3 flex items-end justify-between gap-2 text-white">
                     <div>
                       <h2 className="text-base font-bold text-white drop-shadow sm:text-lg">
-                        Torta de Fresas y Crema
+                        {catalogo[0]?.titulo}
                       </h2>
-                      <p className="text-xs text-white/90">Bizcocho suave y crema chantilly artesanal</p>
+                      <p className="line-clamp-1 text-xs text-white/90">{catalogo[0]?.descripcion}</p>
                     </div>
                     <button
                       type="button"
-                      onClick={() => handleAgregar(catalogo[1])}
+                      onClick={() => catalogo[0] && handleAgregar(catalogo[0])}
                       className="shrink-0 rounded-lg bg-cream px-3 py-1.5 text-xs font-bold text-primary shadow transition-all hover:bg-white active:scale-90"
                     >
-                      {agregados[catalogo[1].id] ? "¡Añadida! ✓" : "$78.000 +"}
+                      {catalogo[0] && agregados[catalogo[0].id] ? "¡Añadida! ✓" : catalogo[0] ? `${formatearPrecio(catalogo[0].precio)} +` : ""}
                     </button>
                   </div>
                 </div>
@@ -251,24 +255,21 @@ function Index() {
               <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-beige/60 bg-cream p-3 shadow-xs transition-all hover:border-accent/40 hover:shadow-sm">
                 <div className="relative h-28 w-full overflow-hidden rounded-lg">
                   <img
-                    src={catalogo[5].imagen}
-                    alt="Macarons Surtidos"
+                    src={catalogo[1]?.imagen}
+                    alt={catalogo[1]?.titulo}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                  <span className="absolute top-1.5 right-1.5 rounded-md bg-cream/90 px-1.5 py-0.5 text-[10px] font-bold text-primary">
-                    x12 uds
-                  </span>
                 </div>
                 <div className="mt-2.5">
-                  <h3 className="line-clamp-1 text-xs font-bold text-primary sm:text-sm">Macarons Surtidos</h3>
+                  <h3 className="line-clamp-1 text-xs font-bold text-primary sm:text-sm">{catalogo[1]?.titulo}</h3>
                   <div className="mt-1 flex items-center justify-between">
-                    <span className="text-xs font-bold text-accent">$58.000</span>
+                    <span className="text-xs font-bold text-accent">{catalogo[1] ? formatearPrecio(catalogo[1].precio) : ""}</span>
                     <button
                       type="button"
-                      onClick={() => handleAgregar(catalogo[5])}
+                      onClick={() => catalogo[1] && handleAgregar(catalogo[1])}
                       className="rounded bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
                     >
-                      {agregados[catalogo[5].id] ? "✓" : "+ Añadir"}
+                      {catalogo[1] && agregados[catalogo[1].id] ? "✓" : "+ Añadir"}
                     </button>
                   </div>
                 </div>
@@ -278,27 +279,25 @@ function Index() {
               <div className="group relative flex flex-col justify-between overflow-hidden rounded-xl border border-beige/60 bg-cream p-3 shadow-xs transition-all hover:border-accent/40 hover:shadow-sm">
                 <div className="relative h-28 w-full overflow-hidden rounded-lg">
                   <img
-                    src={catalogo[3].imagen}
-                    alt="Cupcakes Red Velvet"
+                    src={catalogo[2]?.imagen}
+                    alt={catalogo[2]?.titulo}
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
-                  <span className="absolute top-1.5 right-1.5 rounded-md bg-cream/90 px-1.5 py-0.5 text-[10px] font-bold text-primary">
-                    x6 uds
-                  </span>
                 </div>
                 <div className="mt-2.5">
-                  <h3 className="line-clamp-1 text-xs font-bold text-primary sm:text-sm">Cupcakes Red Velvet</h3>
+                  <h3 className="line-clamp-1 text-xs font-bold text-primary sm:text-sm">{catalogo[2]?.titulo}</h3>
                   <div className="mt-1 flex items-center justify-between">
-                    <span className="text-xs font-bold text-accent">$42.000</span>
+                    <span className="text-xs font-bold text-accent">{catalogo[2] ? formatearPrecio(catalogo[2].precio) : ""}</span>
                     <button
                       type="button"
-                      onClick={() => handleAgregar(catalogo[3])}
+                      onClick={() => catalogo[2] && handleAgregar(catalogo[2])}
                       className="rounded bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
                     >
-                      {agregados[catalogo[3].id] ? "✓" : "+ Añadir"}
+                      {catalogo[2] && agregados[catalogo[2].id] ? "✓" : "+ Añadir"}
                     </button>
                   </div>
                 </div>
+              </div>
               </div>
             </div>
           </div>
